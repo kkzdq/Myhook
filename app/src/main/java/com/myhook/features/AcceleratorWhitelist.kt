@@ -19,6 +19,8 @@ import com.myhook.core.HookLog
 object AcceleratorWhitelist : Feature {
 
     override val key = ConfigKeys.ACCEL_ENABLE
+    override val title = "加速器代理白名单"
+    override val desc = "hook VpnService.Builder.establish，为白名单应用提供代理（FFV 实现）"
 
     /** Accelerator / VPN apps that must never be re-proxied (verbatim from Fuck for VIP). */
     private val EXCLUDE = setOf(

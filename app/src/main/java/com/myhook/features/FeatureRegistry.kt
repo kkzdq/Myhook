@@ -5,8 +5,13 @@ object FeatureRegistry {
 
     private val features: List<Feature> = listOf(
         AcceleratorWhitelist,
-        // TODO phase 2: JustTrustMe, hide root/su, hide developer mode, sensor faking,
-        //                protocol downgrade, Toast interception (from HookVip + Fuck for VIP)
+        HideRootSu,
+        HideDeveloperSettings,
+        HideVpn,
+        FlagSecure,
+        // TODO phase 2: JustTrustMe, HTTP Canary pass, protocol downgrade, sensor faking,
+        //                Toast interception, clipboard/contact blocking, device spoof,
+        //                mock location, dialog blocking, ad blocking (from HookVip + FFV)
     )
 
     val all: List<Feature> get() = features

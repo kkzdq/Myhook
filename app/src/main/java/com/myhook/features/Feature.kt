@@ -10,6 +10,12 @@ interface Feature {
     /** Config key that toggles this feature. */
     val key: String
 
+    /** UI title. */
+    val title: String
+
+    /** UI description. */
+    val desc: String
+
     /** Packages to install into. Empty set = every package in the module scope. */
     val packages: Set<String>
 

@@ -18,4 +18,11 @@ object ConfigKeys {
     // Extension features
     const val ACCEL_ENABLE = "accel_whitelist_enable"
     const val ACCEL_WHITELIST = "accel_whitelist_apps" // comma separated
+
+    const val HIDE_ROOT_ENABLE = "hide_root_enable"
+    const val HIDE_DEV_ENABLE = "hide_dev_enable"
+    const val FLAG_SECURE_ENABLE = "flag_secure_enable"
+    const val HIDE_VPN_ENABLE = "hide_vpn_enable"
+    const val TOAST_FILTER_ENABLE = "toast_filter_enable"
+    const val TOAST_FILTER_KEYWORDS = "toast_filter_keywords" // comma separated
 }

@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.myhook.core.ConfigKeys
+import com.myhook.features.AcceleratorWhitelist
+import com.myhook.features.FeatureRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -184,7 +187,6 @@ private fun FeaturesTab(
     var oppoMode by remember { mutableIntStateOf(prefs.int(ConfigKeys.OPPO_MODE, 0)) }
     var duoEnable by remember { mutableStateOf(prefs.bool(ConfigKeys.DUO_ENABLE, false)) }
     var duoZone by remember { mutableStateOf(prefs.str(ConfigKeys.DUO_TIMEZONE, "Asia/Tokyo")) }
-    var accelEnable by remember { mutableStateOf(prefs.bool(ConfigKeys.ACCEL_ENABLE, false)) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         FeatureHeader("OPPO 健康 · 步数修改")
@@ -226,20 +228,27 @@ private fun FeaturesTab(
         )
 
         HorizontalDivider()
-        FeatureHeader("加速器 · 代理白名单")
-        ListItem(
-            headlineContent = { Text("启用") },
-            supportingContent = { Text("hook VpnService.Builder.establish，为白名单应用提供代理（FFV 实现）") },
-            trailingContent = {
-                Switch(checked = accelEnable, onCheckedChange = { accelEnable = it; prefs.putBool(ConfigKeys.ACCEL_ENABLE, it) })
-            },
-        )
-        Button(
-            onClick = { setShowWhitelist(true) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        ) {
-            val n = prefs.str(ConfigKeys.ACCEL_WHITELIST, "").split(",").count { it.trim().isNotEmpty() }
-            Text("选择白名单应用 ($n)")
+        FeatureHeader("拓展功能")
+        FeatureRegistry.all.forEach { feature ->
+            key(feature.key) {
+                var on by remember { mutableStateOf(prefs.bool(feature.key, false)) }
+                ListItem(
+                    headlineContent = { Text(feature.title) },
+                    supportingContent = { Text(feature.desc) },
+                    trailingContent = {
+                        Switch(checked = on, onCheckedChange = { on = it; prefs.putBool(feature.key, it) })
+                    },
+                )
+                if (feature is AcceleratorWhitelist) {
+                    Button(
+                        onClick = { setShowWhitelist(true) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    ) {
+                        val n = prefs.str(ConfigKeys.ACCEL_WHITELIST, "").split(",").count { it.trim().isNotEmpty() }
+                        Text("选择白名单应用 ($n)")
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(24.dp))
     }
