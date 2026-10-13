@@ -36,30 +36,23 @@ class ConfigProvider : ContentProvider() {
         return cursor
     }
 
+    /**
+     * Read-only on purpose. The provider must stay `exported` because hooked processes run with the
+     * **target app's** UID and have to be able to read the config — but nothing outside this module
+     * has any business writing it. The UI writes the preferences directly, so the write path was
+     * never used; keeping it open would just let any installed app rewrite MyHook's config.
+     */
     override fun update(
         uri: Uri,
         values: ContentValues?,
         selection: String?,
         selectionArgs: Array<out String>?,
     ): Int {
-        val editor = prefs().edit()
-        values?.keySet()?.forEach { key ->
-            when (val v = values.get(key)) {
-                is Int -> editor.putInt(key, v)
-                is Long -> editor.putLong(key, v)
-                is Boolean -> editor.putBoolean(key, v)
-                is String -> editor.putString(key, v)
-                else -> editor.remove(key)
-            }
-        }
-        editor.apply()
-        return 1
+        android.util.Log.w(HookLog.TAG, "ConfigProvider is read-only; ignoring update from uid=${android.os.Process.myUid()}")
+        return 0
     }
 
-    override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        update(uri, values, null, null)
-        return uri
-    }
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
 
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?): Int = 0
 
