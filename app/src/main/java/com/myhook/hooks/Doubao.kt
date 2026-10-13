@@ -7,7 +7,7 @@ import java.lang.reflect.Modifier
 /**
  * 豆包 (com.larus.nova) — 无水印保存图片。
  *
- * Ported from HookVip `C1070` / action `C0826(4)` (`m2201`):
+ * Hook:
  *   com.larus.im.bean.message.block.BlockContent#getCreationBlock() 后置:
  *       遍历 creations，对 type==1 且 image.status==2 的项，取 image.imageOriRaw 的
  *       原始 url/width/height，再用该原始 url 覆盖 image 里所有同尺寸子对象的 url

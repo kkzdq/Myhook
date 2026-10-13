@@ -61,7 +61,6 @@ kotlin {
 dependencies {
     // LibXposed API — provided by the framework at runtime.
     // The 101 artifacts require compileSdk 36; the 102 artifacts require compileSdk 37
-    // (Android 17, currently a preview platform), so we stay on 101. HookVip does the same.
     compileOnly("io.github.libxposed:api:101.0.1")
     // libxposed service — talks to the framework (scope request). Must ship inside the APK.
     // NOTE: this AAR depends on kotlin-stdlib 2.2.10, which is why the Kotlin plugin is 2.2.10.

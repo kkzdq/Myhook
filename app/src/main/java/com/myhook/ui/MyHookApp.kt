@@ -105,9 +105,8 @@ private class Prefs(ctx: Context) {
 /**
  * Apps that (a) have a real, implemented hook and (b) are installed.
  *
- * Driven by [AppRegistry.supportedPackages] — NOT by the generated HookCatalog, because the
- * catalog only contains HookVip's apps and would hide ports from StepShook (OPPO健康),
- * duotimefaker (多邻国) and Fuck-for-VIP.
+ * Driven by [AppRegistry.supportedPackages] rather than the generated catalog, so any package with
+ * an implemented hook shows up even if it is not in the catalog.
  */
 private suspend fun loadCatalog(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
     val pm = ctx.packageManager
@@ -581,10 +580,14 @@ private fun AboutTab() {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("MyHook", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
-        Text("LibXposed API 101 模块。应用 hook 思路来自 HookVip，拓展功能思路来自 Fuck for VIP，内置 StepShook（OPPO 步数）与 duotimefaker（多邻国时区）。")
+        Text(
+            "统一的 LSPosed 模块：为指定应用解锁会员/去广告，并提供一组通用的拓展功能。",
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(Modifier.height(8.dp))
-        Text("· 应用页：勾选 = 直接请求加入作用域（通知栏确认），已加入的置顶。")
-        Text("· 拓展功能页：列出全部应用，点进去按 app 单独开关。")
+        Text("· 应用页：只列出已支持的应用，勾选 = 请求加入作用域（通知栏确认），已加入的置顶。")
+        Text("· 拓展功能页：列出全部应用，点进去按 app 单独设置。")
+        Text("· 每个应用顶部有总开关，关闭时该应用的一切功能都不生效。")
         Spacer(Modifier.height(8.dp))
         Text("日志: adb logcat -s MyHook", style = MaterialTheme.typography.bodySmall)
     }

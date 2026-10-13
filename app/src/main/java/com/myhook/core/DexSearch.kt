@@ -9,10 +9,9 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher
 /**
  * Runtime dex search via DexKit.
  *
- * Some target apps fully obfuscate their class names, so there is nothing static to hook. Both
- * source modules (HookVip / Fuck-for-VIP) solve this by bundling DexKit and matching a method by
- * its **return type plus a string constant it uses**, then hooking whatever comes back. This helper
- * does the same thing in one place.
+ * Some target apps fully obfuscate their class names, so there is nothing static to hook. The
+ * approach is to match a method by its **return type plus a string constant it uses**, then hook
+ * whatever comes back.
  *
  * The search runs on a background thread (a full-APK scan can take a second or two) and every
  * failure is logged and swallowed — a failed search must never take the target app down.

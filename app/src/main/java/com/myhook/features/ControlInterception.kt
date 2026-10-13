@@ -5,7 +5,6 @@ import com.myhook.core.HookContext
 import com.myhook.core.HookLog
 
 /**
- * 控件拦截 — ported from Fuck for VIP's `hook_view_block` (displayed as "control_interception").
  * Blocks `ViewStub.inflate()` so lazy-loaded ad layouts never get created.
  */
 object ControlInterception : Feature {

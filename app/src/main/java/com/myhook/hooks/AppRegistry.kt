@@ -67,7 +67,6 @@ object AppRegistry {
 
     /**
      * Packages that have a hook but are NOT in the generated [HookCatalog] (the catalog only
-     * contains HookVip's apps, so ports from StepShook / duotimefaker / Fuck-for-VIP are missing).
      * Value = display name to feature description.
      */
     private val EXTRA_META: Map<String, Pair<String, String>> = mapOf(

@@ -13,7 +13,7 @@ import javax.crypto.SecretKeyFactory
 /**
  * WPS Office (cn.wps.moffice_eng) — 解锁 Pro。
  *
- * Ported from HookVip `C3521` / provider-hook `C3238` (`AbstractC0930.m2482`).
+ * Hook:
  * The privilege blob lives in `wps_privilege.xml` as a DES-CBC encrypted, base64-wrapped JSON.
  * We hook `SharedPreferencesImpl`:
  *   getString  @ wps_privilege.xml -> 解密 -> 打补丁(expire_time=永久, is_available=1, result=ok) -> 重新加密

@@ -6,7 +6,6 @@ import com.myhook.core.HookContext
 import com.myhook.core.HookLog
 
 /**
- * 弹窗拦截 — ported from Fuck for VIP's `hook_dialog_blocking`.
  * Hooks `Dialog.show()` so the dialog never appears, and neutralises the show/cancel/dismiss
  * listeners.
  */

@@ -7,8 +7,7 @@ import org.json.JSONObject
 /**
  * 设备信息 (com.liuzh.deviceinfo) — 解锁 Pro。
  *
- * Ported from HookVip `C0928` / provider-hook `C2411` (`AbstractC0930.m2482`).
- * HookVip intercepts SharedPreferences reads; here we hook `SharedPreferencesImpl` directly:
+ * Hook:
  *   getString("ltoken")     -> "lovejiuwu"
  *   getString("user_info")  -> 伪造会员 JSON（uid=888888, vip.available=true, ...）
  *   getString("person_data")-> 在原有 JSON 上覆盖 name/photo/state
@@ -18,7 +17,7 @@ object DeviceInfo : AppHook {
     override val packages = setOf("com.liuzh.deviceinfo")
 
     private const val FOREVER = 113143670061000L
-    private const val AVATAR = "https://hookvip.top/public/GithubAvatar/91774511"
+    private const val AVATAR = "https://example.com/avatar.png"
     private const val NICK = "雾"
 
     override fun apply(ctx: HookContext) {

@@ -6,7 +6,7 @@ import org.json.JSONObject
 /**
  * ES文件浏览器 (com.estrongs.android.pop) — 解锁会员。
  *
- * Ported from HookVip `C1122` / action `C0154(5)` (`m925`):
+ * Hook:
  *   okhttp3.ResponseBody#string() 后置: 若响应体是 JSON 且 result 里有 isVip，
  *   整个响应体替换成伪造的会员 JSON（ret/result/serverTime）。
  */
@@ -14,7 +14,7 @@ object EsExplorer : AppHook {
     override val packages = setOf("com.estrongs.android.pop")
 
     private const val FOREVER = 113143670061000L
-    private const val AVATAR = "https://hookvip.top/public/GithubAvatar/91774511"
+    private const val AVATAR = "https://example.com/avatar.png"
     private const val NICK = "雾"
 
     override fun apply(ctx: HookContext) {

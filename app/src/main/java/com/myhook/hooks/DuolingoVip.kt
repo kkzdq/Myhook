@@ -4,7 +4,7 @@ import com.myhook.core.HookContext
 
 /**
  * 多邻国 — 解锁订阅（Super）。
- * Ported from HookVip: com.duolingo.data.user.SubscriberLevel.hasSubscription() -> true
+ * Hook: com.duolingo.data.user.SubscriberLevel.hasSubscription() -> true
  *
  * Coexists with [DuolingoTimezone] (different capability, same app).
  */

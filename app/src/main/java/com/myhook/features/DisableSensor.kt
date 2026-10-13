@@ -8,7 +8,6 @@ import com.myhook.core.HookContext
 import com.myhook.core.HookLog
 
 /**
- * 禁用传感器 — ported from Fuck for VIP's `hook_sensor_manger`.
  * Hooks every `SensorManager.registerListener` overload so the app never receives sensor events,
  * and blanks `getDefaultSensor` / `getSensorList`.
  */

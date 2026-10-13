@@ -6,7 +6,7 @@ import com.myhook.core.HookContext
 /**
  * 醒图 (com.xt.retouch) — 解锁会员功能。
  *
- * Ported from HookVip `C3627` / `C3579` (DexKit) + actions `C3084(24)` / `C3084(25)`:
+ * Hook:
  *   1. uses "SubscribeSdkHelper" + "getUserVipInfo error" -> 把返回的 VIP 对象字段改成永久会员
  *      (flag=true, endTime/vipRealEnd/benefitEndAt=113143670061000L, curVipLevel="vip", startTime=now)
  *   2. uses "SubscribeApiImpl" + "no strategy prop: " + "force local auth" -> true

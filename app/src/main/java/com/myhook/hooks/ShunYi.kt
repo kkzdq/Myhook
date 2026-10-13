@@ -7,9 +7,9 @@ import java.util.Date
 /**
  * 瞬译 (com.spaceship.screen.textcopy) — 解锁高级版。
  *
- * Ported from HookVip `C3098` / action `C2153` (default branch, idx 29):
+ * Hook:
  *   构造 com.revenuecat.purchases.EntitlementInfos 时，把参数替换成：
- *     args[0] = { "NewHookVip" -> 伪造的 EntitlementInfo(expirationDate=永久,
+ *     args[0] = { "premium" -> 伪造的 EntitlementInfo(expirationDate=永久,
  *                isActive=true, productIdentifier="", latestPurchaseDate=now) }
  *     args[1] = VerificationResult.VERIFIED
  *   （RevenueCat SDK 据此认为订阅有效。）
@@ -33,7 +33,7 @@ object ShunYi : AppHook {
                 ctx.setField(info, "latestPurchaseDate", Date())
             }
             val verified = vCls.enumConstants?.firstOrNull { it.toString() == "VERIFIED" }
-            val map = java.util.Collections.singletonMap("NewHookVip", info)
+            val map = java.util.Collections.singletonMap("premium", info)
             chain.proceed(arrayOf<Any?>(map, verified))
         }
     }

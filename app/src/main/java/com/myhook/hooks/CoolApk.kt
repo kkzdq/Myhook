@@ -6,8 +6,8 @@ import com.myhook.core.HookContext
 /**
  * 酷安 (com.coolapk.market) — 去广告。
  *
- * Ported from Fuck for VIP (FFV) — the app has no HookVip hook.
- * FFV ran three DexKit method searches (`o0O00o0/o0ooOOo`):
+ * Hook:
+ * DexKit method searches:
  *   1. uses "feedDetailReplySponsorCard" + "sponsorType"                     -> null
  *   2. returnType void, uses "410.500" + "410.000"                           -> null
  *   3. returnType boolean, uses "广告请求开关已关闭,请联系穿山甲管理员" + "loadNativeAd" -> false

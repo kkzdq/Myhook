@@ -1,9 +1,8 @@
 package com.myhook.hooks
 
 /**
- * Catalog of apps MyHook supports, generated from HookVip's hook classes
- * (package + display name + feature description + compatibility note).
- * The app list only shows installed apps that appear here.
+ * Catalog of the apps MyHook knows about (package + display name + feature description +
+ * compatibility note). The 应用 page only lists the installed ones that actually have a hook.
  */
 object HookCatalog {
 
@@ -80,7 +79,6 @@ object HookCatalog {
         Entry("com.blueocean.musicplayer", "Y2002电音", "解锁会员", "全版本通杀"),
         Entry("com.jamworks.dynamicspot", "dynamicSpot", "解锁高级版", "全版本通杀"),
         Entry("jp.pxv.android", "pixiv", "解锁高级版", "全版本通杀"),
-        Entry("top.hookvip.pro", "top.hookvip.pro", "", ""),
         Entry("me.mapleaf.calendar", "一叶日历", "解锁高级版", "全版本通杀"),
         Entry("com.wangc.bill", "一木记账", "解锁永久会员/云备份", "全版本通杀"),
         Entry("cn.am7code.tools", "七点工具箱", "解锁会员", "全版本通杀"),

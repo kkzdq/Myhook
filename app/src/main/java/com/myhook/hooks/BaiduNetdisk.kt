@@ -4,7 +4,7 @@ import com.myhook.core.HookContext
 
 /**
  * 百度网盘 — 去除开屏/回屏广告。
- * Ported from HookVip: com.baidu.netdisk.advertise.splash.SplashManager.limitCountAdShow() -> true
+ * Hook: com.baidu.netdisk.advertise.splash.SplashManager.limitCountAdShow() -> true
  */
 object BaiduNetdisk : AppHook {
     override val packages = setOf("com.baidu.netdisk")

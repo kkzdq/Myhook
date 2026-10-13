@@ -7,7 +7,7 @@ import com.myhook.core.HookContext
 /**
  * pixiv (jp.pxv.android) — 解锁高级版。
  *
- * Ported from HookVip `C2681` / action `C2143` (20/21):
+ * Hook:
  *   android.accounts.AccountManager#getAccountsByType("net.pixiv") 后置:
  *       对每个 account 调 setUserData(acc, "isPremium", "true")
  *   jp.pxv.android.domain.auth.entity.OAuthUser 构造后: isPremium = true

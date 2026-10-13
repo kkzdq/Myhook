@@ -6,7 +6,7 @@ import java.lang.reflect.Method
 /**
  * 菜鸟 (com.cainiao.wireless) — 去除开屏广告 / 精简广告布局。
  *
- * Ported from HookVip `C0520` (plaintext fallbacks only; the DexKit-driven lookups are not
+ * Hook:
  * reproduced):
  *   HomePageFragment 里名字同时含 "init" 和 "RecommendView" 的方法 -> 返回 null
  *   NavigationSupport 构造: 只保留 key ∈ {homepage, im, personal_center} 的项

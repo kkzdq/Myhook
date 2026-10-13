@@ -5,8 +5,8 @@ import com.myhook.core.HookContext
 /**
  * 阿里云盘 (com.alicloud.databox) — 解锁会员/试用。
  *
- * Ported from Fuck for VIP (FFV) — the app has no HookVip hook.
- * FFV callback `p169o00o00oO/o000OOo` case 23:
+ * Hook:
+ * Hook:
  *   com.alicloud.databox.account.service.idl.business.UserTrialResponse#getTrialStatus() -> "1"
  *   com.alicloud.databox.account.service.idl.business.BusinessFeature#getTrialStatus()     -> "1"
  *   com.alicloud.databox.account.service.idl.business.BusinessFeature#getLastTrialTime()   -> 218330035688L

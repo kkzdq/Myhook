@@ -9,7 +9,7 @@ import com.myhook.core.HookLog
 /**
  * 外星仔加速器 (com.etalien.booster) — 去除开屏广告（免广告领时长）。
  *
- * Ported from HookVip `C1212` (plaintext part) / action `C0826(7)`:
+ * Hook:
  *   com.zero.flutter_gromore_ads.page.AdSplashActivity#onCreate(Bundle) 后置:
  *       发送本地广播 BR_AdSplashLoadActivity（通知开屏已加载，跳过等待广告）
  */

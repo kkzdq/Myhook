@@ -8,7 +8,6 @@ import com.myhook.core.HookLog
 /**
  * 加速器白名单 — enable this on each app you want the accelerator to proxy.
  *
- * Mechanism (from Fuck for VIP): inside a VPN/accelerator process, hook
  * `android.net.VpnService$Builder.establish()` and inject every whitelisted package with
  * `addAllowedApplication(pkg)` before the tunnel is built. The whitelist is exactly the set of
  * apps that have this toggle enabled.
@@ -18,7 +17,6 @@ object AcceleratorWhitelist : Feature {
     override val title = "加速器白名单"
     override val desc = "让加速器为这个 app 提供 VPN 代理（在加速器里也开启）"
 
-    /** Accelerator / VPN apps that must never be re-proxied (verbatim from Fuck for VIP). */
     private val EXCLUDE = setOf(
         "com.richtech.spacevpn",
         "world.letsgo.booster.android.pro",

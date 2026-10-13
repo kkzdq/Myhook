@@ -6,8 +6,8 @@ import com.myhook.core.HookLog
 /**
  * 外部存储设备 (com.android.externalstorage) — 放开 Android/data 等目录的访问限制。
  *
- * Ported from Fuck for VIP (FFV) — the app has no HookVip hook.
- * FFV `p169o00o00oO/o00000O0.OooO0OO` hooks the platform provider directly:
+ * Hook:
+ * Hook:
  *   com.android.externalstorage.ExternalStorageProvider#shouldHideDocument(String)        -> false
  *   com.android.externalstorage.ExternalStorageProvider#shouldBlockDirectoryFromTree(String) -> false
  *   (fallback for older builds) #shouldBlockFromTree(String)                                -> false

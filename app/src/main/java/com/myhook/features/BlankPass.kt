@@ -7,7 +7,6 @@ import com.myhook.core.HookContext
 import com.myhook.core.HookLog
 
 /**
- * 空白通行证 — ported from Fuck for VIP's `hook_contact` (displayed as "blank_pass").
  * Makes contact/privacy queries return an empty cursor, so the app thinks it got a result while
  * seeing nothing.
  */

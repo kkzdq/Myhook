@@ -8,11 +8,10 @@ import io.github.libxposed.api.XposedInterface
 import java.util.Calendar
 
 /**
- * OPPO Health (com.heytap.health) step editing — a clean port of StepShook v1.7.
+ * OPPO Health (com.heytap.health) step editing.
  *
- * Unlike the legacy "sensor injection" approach, this hooks the OPPO data-engine getters, so it
- * keeps working on modern OPPO Health builds and can both *raise* (floor) and *cap* (lower) the
- * value. Only today's record is touched.
+ * Hooks the OPPO data-engine getters, so it keeps working on modern OPPO Health builds and can
+ * both *raise* (floor) and *cap* (lower) the value. Only today's record is touched.
  */
 object OppoHealthSteps : AppHook {
 

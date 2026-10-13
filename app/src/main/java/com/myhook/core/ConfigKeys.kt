@@ -6,12 +6,12 @@ object ConfigKeys {
     const val AUTHORITY = "com.myhook.config"
     const val CONFIG_URI = "content://$AUTHORITY/config"
 
-    // OPPO Health step editing (ported from StepShook)
+    // OPPO Health step editing
     const val OPPO_ENABLE = "oppo_enable"
     const val OPPO_TARGET = "oppo_target_steps" // 0 = disabled
     const val OPPO_MODE = "oppo_mode"           // 0 = floor (raise), 1 = cap (lower)
 
-    // Duolingo timezone faker (ported from duotimefaker)
+    // Duolingo timezone faker
     const val DUO_ENABLE = "duo_enable"
     const val DUO_TIMEZONE = "duo_timezone"
 

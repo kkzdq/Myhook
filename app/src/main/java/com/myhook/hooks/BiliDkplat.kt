@@ -4,7 +4,7 @@ import com.myhook.core.HookContext
 
 /**
  * 小X分身 (com.bly.dkplat) — 解锁会员。
- * Ported from HookVip: com.bly.dkplat.cache.UserCache
+ * Hook: com.bly.dkplat.cache.UserCache
  *   getVipType() -> 1, isVipUser() -> true, getExpiredTime() -> 113143670061000L
  */
 object BiliDkplat : AppHook {

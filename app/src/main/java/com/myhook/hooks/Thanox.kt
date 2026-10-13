@@ -5,12 +5,11 @@ import com.myhook.core.HookContext
 /**
  * Thanox (github.tornaco.android.thanos) — 解锁高级版。
  *
- * Ported from HookVip `C3247` / `AbstractC3246` lazy constants:
+ * Hook:
  *   CommonApiResWrapper#getResult() -> 0
  *   CommonApiResWrapper#getK()      -> "7F8C..."   (f10977)
  *   CommonApiResWrapper#getMsg()    -> {"validation":"Valid", ...} (f10976)
  *
- * Note: HookVip's newer-thanox branch additionally fakes BillingClient objects via DexKit; that
  * runtime dex search is not reproduced here.
  */
 object Thanox : AppHook {

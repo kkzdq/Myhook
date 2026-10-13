@@ -4,7 +4,7 @@ import com.myhook.core.HookContext
 
 /**
  * 网易云音乐 — 禁用下载音乐加密。
- * Ported from HookVip: com.netease.cloudmusic.meta.MusicInfo.isEncrptDldPayMusic() -> false
+ * Hook: com.netease.cloudmusic.meta.MusicInfo.isEncrptDldPayMusic() -> false
  */
 object NeteaseMusic : AppHook {
     override val packages = setOf("com.netease.cloudmusic")

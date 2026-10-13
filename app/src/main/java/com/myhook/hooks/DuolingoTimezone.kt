@@ -8,10 +8,10 @@ import java.time.ZoneId
 import java.util.TimeZone
 
 /**
- * Duolingo (com.duolingo) timezone faker — ported from duotimefaker.
+ * Duolingo (com.duolingo) timezone faker.
  *
- * Note: this is a *different* capability from HookVip's Duolingo hook (which unlocks Super by
- * forcing SubscriberLevel.hasSubscription() -> true). Both can coexist.
+ * A different capability from the Super unlock below (which forces
+ * `SubscriberLevel.hasSubscription() -> true`). Both can coexist.
  */
 object DuolingoTimezone : AppHook {
 

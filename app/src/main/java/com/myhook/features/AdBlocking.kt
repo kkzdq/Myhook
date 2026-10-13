@@ -6,7 +6,6 @@ import com.myhook.core.HookContext
 import com.myhook.core.HookLog
 
 /**
- * 广告拦截 — ported from Fuck for VIP's `hook_ad`.
  * Auto-finishes the activities of the well-known Chinese ad SDKs.
  */
 object AdBlocking : Feature {

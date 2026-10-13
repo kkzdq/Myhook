@@ -6,8 +6,7 @@ import com.myhook.core.HookLog
 /**
  * Pydroid 3 (ru.iiec.pydroid3) — 解锁高级版。
  *
- * Ported from Fuck for VIP (FFV) — the app has no HookVip hook.
- * FFV used DexKit to find a `boolean` method whose body references the string
+ * Hook:
  * "premium_purchased" and forced it to `true`. That string is the app's premium preference key,
  * so hooking the preference read directly is equivalent and needs no runtime dex search:
  *   SharedPreferencesImpl#getBoolean("premium_purchased", ...) -> true
