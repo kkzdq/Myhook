@@ -22,7 +22,7 @@ object IceBox : AppHook {
     override fun apply(ctx: HookContext) {
         val ok = ctx.hookMethod(
             "com.tencent.mmkv.MMKV",
-            "getBoolean", String::class.java, Boolean::class.javaPrimitiveType,
+            "getBoolean", String::class.java, Boolean::class.javaPrimitiveType!!,
         ) { chain ->
             if (chain.args.any { it == KEY }) true else chain.proceed()
         }
