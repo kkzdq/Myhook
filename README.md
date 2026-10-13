@@ -6,16 +6,18 @@
 - 拓展功能 → 参考 **Fuck for VIP**（旧 API，触发“此模块使用了已废弃且即将移除的功能”）
 - 内置两个小模块：**StepShook**（OPPO 健康步数）与 **duotimefaker**（多邻国时区伪造）
 
-## 为什么用 LibXposed 新 API（101/102）
+## 为什么用 LibXposed 新 API（101）
 
 LSPosed v2.2.0 的 daemon 会扫描模块：**模块 API 版本 < 100（旧 API）+ 声明了 `xposedminversion` + 存在 world-readable 偏好文件** 三者同时成立，才标记“已废弃”。这正是 `XSharedPreferences` 的机制。
 
 - Fuck for VIP：`XSharedPreferences` 用了 112 处 → 被标记。
 - HookVip：`META-INF/xposed/module.prop` = `minApiVersion=101 / targetApiVersion=101 / staticScope=false` → 直接放过。
 
-本模块 `minApiVersion=101 / targetApiVersion=102`（102 是当前 API，新增热重载 / `detach()` / 原子替换 hook），配置走自建 `ContentProvider`（`com.myhook.config`），**不碰 `XSharedPreferences`**。
+本模块 `minApiVersion=101 / targetApiVersion=101`，配置走自建 `ContentProvider`（`com.myhook.config`），**不碰 `XSharedPreferences`**。
 
-> 注意：`targetApiVersion>=102` 时 **禁止** 再调用旧的 `de.robv.android.xposed` API。本模块只用新 API，符合要求。
+> **为什么不用 102**：libxposed 的 `api`/`service` AAR 在 102 版本声明 `minCompileSdk=37`（Android 17，目前还是预览平台）；101 版本只要求 `minCompileSdk=36`。所以用 101 的 AAR + `compileSdk=36` + AGP 8.11.2 + Gradle 8.13。等 102 的 AAR 落到稳定 SDK 再切。
+>
+> **注意**：`targetApiVersion>=102` 时禁止调用旧的 `de.robv.android.xposed` API；本模块只用新 API，将来切 102 也不用改代码。
 
 ## 构建（GitHub Actions）
 
@@ -32,8 +34,8 @@ gradle :app:assembleDebug
 依赖（已在 `app/build.gradle.kts` 固定）：
 
 ```kotlin
-compileOnly("io.github.libxposed:api:102.0.0")          // 框架运行时提供
-implementation("io.github.libxposed:service:102.0.0")    // 随 APK 打包，用于作用域请求
+compileOnly("io.github.libxposed:api:101.0.1")          // 框架运行时提供
+implementation("io.github.libxposed:service:101.0.0")    // 随 APK 打包，用于作用域请求
 ```
 
 ## 安装与使用

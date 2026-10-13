@@ -9,12 +9,10 @@ import io.github.libxposed.api.XposedModuleInterface
 /**
  * LibXposed API entry point (see META-INF/xposed/java_init.list).
  *
- * Declared with minApiVersion=101 / targetApiVersion=102 / staticScope=false so:
+ * Declared with minApiVersion=101 / targetApiVersion=101 / staticScope=false so:
  *  - the framework does NOT flag it with the "deprecated feature" warning (that only fires for
  *    modules still on the legacy de.robv.android.xposed API with world-readable prefs), and
  *  - users can add apps to the scope at runtime from the in-app picker.
- *
- * Target 102 means the legacy de.robv.android.xposed API must NOT be used anywhere in this module.
  */
 class MyHookEntry : XposedModule() {
 

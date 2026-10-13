@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.myhook"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.myhook"
         minSdk = 27
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
         vectorDrawables { useSupportLibrary = true }
@@ -47,11 +47,11 @@ android {
 
 dependencies {
     // LibXposed API — provided by the framework at runtime.
-    // 102 is the current API (adds hot reload, detach, atomic hook replace). We target 102 but
-    // keep minApiVersion=101 so the module also loads on a 101-only framework.
-    compileOnly("io.github.libxposed:api:102.0.0")
+    // The 101 artifacts require compileSdk 36; the 102 artifacts require compileSdk 37
+    // (Android 17, currently a preview platform), so we stay on 101. HookVip does the same.
+    compileOnly("io.github.libxposed:api:101.0.1")
     // libxposed service — talks to the framework (scope request). Must ship inside the APK.
-    implementation("io.github.libxposed:service:102.0.0")
+    implementation("io.github.libxposed:service:101.0.0")
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
