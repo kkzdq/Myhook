@@ -14,6 +14,13 @@ object AppRegistry {
         BiliDkplat,
         BaiduInput,
         BaiduNetdisk,
+        MobileTicket,
+        Pixiv,
+        AppShare,
+        Cainiao,
+        Etalien,
+        Doubao,
+        Thanox,
     )
 
     fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
