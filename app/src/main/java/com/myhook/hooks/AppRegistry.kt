@@ -31,6 +31,7 @@ object AppRegistry {
         Douban,
         AdbHelper,
         Pydroid,
+        ExternalStorage,
     )
 
     /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
@@ -63,6 +64,7 @@ object AppRegistry {
         "com.douban.frodo" to ("豆瓣" to "去信息流广告"),
         "com.didjdk.adbhelper" to ("甲壳虫ADB助手" to "解锁会员"),
         "ru.iiec.pydroid3" to ("Pydroid 3" to "解锁高级版"),
+        "com.android.externalstorage" to ("外部存储设备" to "放开 Android/data 等目录访问限制"),
     )
 
     private val catalogByPkg: Map<String, HookCatalog.Entry> by lazy {
