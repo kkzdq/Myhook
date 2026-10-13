@@ -34,6 +34,9 @@ object AppRegistry {
         ExternalStorage,
         Via,
         MacroDroid,
+        CoolApk,
+        QQMusic,
+        WeWork,
     )
 
     /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
@@ -69,6 +72,9 @@ object AppRegistry {
         "com.android.externalstorage" to ("外部存储设备" to "放开 Android/data 等目录访问限制"),
         "mark.via" to ("Via 浏览器" to "屏蔽内置广告域名（DexKit 搜类）"),
         "com.arlosoft.macrodroid" to ("MacroDroid" to "解锁 Pro（DexKit 搜类）"),
+        "com.coolapk.market" to ("酷安" to "去广告（DexKit 搜类）"),
+        "com.tencent.qqmusic" to ("QQ音乐" to "超品音质/去下载限制（DexKit 搜类）"),
+        "com.tencent.wework" to ("企业微信" to "强制开启平板模式"),
     )
 
     private val catalogByPkg: Map<String, HookCatalog.Entry> by lazy {
