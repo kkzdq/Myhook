@@ -63,7 +63,6 @@ import androidx.core.graphics.drawable.toBitmap
 import com.myhook.core.ConfigKeys
 import com.myhook.features.FeatureRegistry
 import com.myhook.hooks.AppRegistry
-import com.myhook.hooks.HookCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -93,26 +92,27 @@ private class Prefs(ctx: Context) {
 /**
  * Apps that (a) have a real, implemented hook and (b) are installed.
  *
- * The generated [HookCatalog] lists every app HookVip supports; MyHook only shows the subset that
- * actually has a hook ported, so the list never advertises an app that would do nothing.
+ * Driven by [AppRegistry.supportedPackages] — NOT by the generated HookCatalog, because the
+ * catalog only contains HookVip's apps and would hide ports from StepShook (OPPO健康),
+ * duotimefaker (多邻国) and Fuck-for-VIP.
  */
 private suspend fun loadCatalog(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
     val pm = ctx.packageManager
-    HookCatalog.ENTRIES
-        .filter { AppRegistry.hasHook(it.pkg) }
-        .mapNotNull { e ->
-        val row = try {
-            val pi = pm.getPackageInfo(e.pkg, 0)
+    AppRegistry.supportedPackages().sorted().mapNotNull { pkg ->
+        try {
+            val pi = pm.getPackageInfo(pkg, 0)
             val ai = pi.applicationInfo ?: return@mapNotNull null
             AppRow(
-                pkg = e.pkg, name = e.name, features = e.features, compat = e.compat,
+                pkg = pkg,
+                name = AppRegistry.displayName(pkg, pm.getApplicationLabel(ai).toString()),
+                features = AppRegistry.featureSummary(pkg),
+                compat = AppRegistry.compatFor(pkg),
                 version = pi.versionName ?: "",
                 icon = try { ai.loadIcon(pm) } catch (t: Throwable) { null },
             )
         } catch (t: Throwable) {
             null
         }
-        row
     }
 }
 
@@ -266,6 +266,9 @@ private fun AppsTab(
     }
 }
 
+/** Apps whose per-app settings are special (not just the 6 generic extension toggles). */
+private val PINNED_APPS = setOf("com.heytap.health", "com.duolingo")
+
 @Composable
 private fun AllAppsTab(
     rows: List<AppRow>,
@@ -277,6 +280,7 @@ private fun AllAppsTab(
 ) {
     val shown = remember(rows, query) {
         rows.filter { query.isBlank() || it.name.contains(query, true) || it.pkg.contains(query, true) }
+            .sortedWith(compareByDescending<AppRow> { it.pkg in PINNED_APPS }.thenBy { it.name })
     }
     Column(Modifier.fillMaxSize()) {
         if (searchOpen) {
@@ -287,7 +291,8 @@ private fun AllAppsTab(
             )
         }
         Text(
-            "点应用进去单独设置拓展功能（${FeatureRegistry.all.size} 项）",
+            "点应用进去单独设置（${FeatureRegistry.all.size} 项拓展功能）｜" +
+                "OPPO健康 / 多邻国 有专属设置，已置顶",
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
         )
@@ -305,7 +310,11 @@ private fun AllAppsTab(
                     checked = n > 0,
                     checkedReadOnly = true,
                     onClick = { onOpen(row) },
-                    trailingLabel = if (n > 0) "已开 $n" else null,
+                    trailingLabel = when {
+                        row.pkg in PINNED_APPS -> "专属设置（已置顶）"
+                        n > 0 -> "已开 $n"
+                        else -> null
+                    },
                 ) { }
             }
         }
