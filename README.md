@@ -15,7 +15,7 @@ LSPosed v2.2.0 的 daemon 会扫描模块：**模块 API 版本 < 100（旧 API�
 
 本模块 `minApiVersion=101 / targetApiVersion=101`，配置走自建 `ContentProvider`（`com.myhook.config`），**不碰 `XSharedPreferences`**。
 
-> **为什么不用 102**：libxposed 的 `api`/`service` AAR 在 102 版本声明 `minCompileSdk=37`（Android 17，目前还是预览平台）；101 版本只要求 `minCompileSdk=36`。所以用 101 的 AAR + `compileSdk=36` + AGP 8.11.2 + Gradle 8.13。等 102 的 AAR 落到稳定 SDK 再切。
+> **为什么不用 102**：libxposed 的 `api`/`service` AAR 在 102 版本声明 `minCompileSdk=37`（Android 17，目前还是预览平台）；101 版本只要求 `minCompileSdk=36`。所以用 101 的 AAR + `compileSdk=36` + AGP 8.11.2 + Gradle 8.13 + **Kotlin 2.2.10**（`service` AAR 依赖 `kotlin-stdlib:2.2.10`，Kotlin 插件必须同版本，否则编译器内部错误）。等 102 的 AAR 落到稳定 SDK 再切。
 >
 > **注意**：`targetApiVersion>=102` 时禁止调用旧的 `de.robv.android.xposed` API；本模块只用新 API，将来切 102 也不用改代码。
 
