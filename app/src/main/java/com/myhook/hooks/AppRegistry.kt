@@ -21,6 +21,9 @@ object AppRegistry {
         Etalien,
         Doubao,
         Thanox,
+        EsExplorer,
+        ShunYi,
+        DeviceInfo,
     )
 
     fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
