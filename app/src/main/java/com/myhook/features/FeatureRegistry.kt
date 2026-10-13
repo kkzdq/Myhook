@@ -1,21 +1,21 @@
 package com.myhook.features
 
+import com.myhook.core.ConfigStore
+
 /** Registry of extension features. Add new features here. */
 object FeatureRegistry {
 
-    private val features: List<Feature> = listOf(
+    /** The six per-app extension features. */
+    val all: List<Feature> = listOf(
         AcceleratorWhitelist,
-        HideRootSu,
-        HideDeveloperSettings,
-        HideVpn,
-        FlagSecure,
-        // TODO phase 2: JustTrustMe, HTTP Canary pass, protocol downgrade, sensor faking,
-        //                Toast interception, clipboard/contact blocking, device spoof,
-        //                mock location, dialog blocking, ad blocking (from HookVip + FFV)
+        DisableSensor,
+        BlankPass,
+        DialogBlocking,
+        ControlInterception,
+        AdBlocking,
     )
 
-    val all: List<Feature> get() = features
-
-    fun forPackage(pkg: String): List<Feature> =
-        features.filter { it.packages.isEmpty() || pkg in it.packages }
+    /** Features that the user enabled for [pkg]. */
+    fun enabledFor(pkg: String): List<Feature> =
+        all.filter { ConfigStore.bool(it.enabledKey(pkg), false) }
 }

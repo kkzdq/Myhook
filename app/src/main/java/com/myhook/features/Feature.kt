@@ -3,11 +3,11 @@ package com.myhook.features
 import com.myhook.core.HookContext
 
 /**
- * An extension feature ("拓展功能") — a toggle that installs system-level hooks in the target
- * process rather than a per-app VIP unlock.
+ * An extension feature ("拓展功能"). Every feature is configured **per app**: the user taps an app
+ * in the list and toggles the features that apply to it.
  */
 interface Feature {
-    /** Config key that toggles this feature. */
+    /** Stable id, also used to build the per-app config key. */
     val key: String
 
     /** UI title. */
@@ -16,8 +16,8 @@ interface Feature {
     /** UI description. */
     val desc: String
 
-    /** Packages to install into. Empty set = every package in the module scope. */
-    val packages: Set<String>
+    /** Config key that stores "enabled for [pkg]". */
+    fun enabledKey(pkg: String): String = "f_${key}_$pkg"
 
     fun apply(ctx: HookContext)
 }

@@ -1,19 +1,22 @@
 package com.myhook.hooks
 
-import com.myhook.features.AcceleratorWhitelist
 import com.myhook.features.Feature
 import com.myhook.features.FeatureRegistry
 
-/** Central registry of every hook and feature. Add new modules here. */
+/** Central registry of every hook. Add new app hooks here. */
 object AppRegistry {
 
     private val hooks: List<AppHook> = listOf(
         OppoHealthSteps,
         DuolingoTimezone,
-        // TODO phase 2: port HookVip's per-app hooks (com.netease.cloudmusic, tv.danmaku.bili, ...)
+        DuolingoVip,
+        NeteaseMusic,
+        BiliDkplat,
+        BaiduInput,
+        BaiduNetdisk,
     )
 
     fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
 
-    fun featuresFor(pkg: String): List<Feature> = FeatureRegistry.forPackage(pkg)
+    fun featuresFor(pkg: String): List<Feature> = FeatureRegistry.enabledFor(pkg)
 }

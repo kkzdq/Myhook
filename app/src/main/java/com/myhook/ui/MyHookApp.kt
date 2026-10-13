@@ -1,6 +1,7 @@
 package com.myhook.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,12 +23,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -63,7 +61,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.myhook.core.ConfigKeys
-import com.myhook.features.AcceleratorWhitelist
 import com.myhook.features.FeatureRegistry
 import com.myhook.hooks.HookCatalog
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** One row of the app list: a catalog entry that is actually installed. */
+/** One row of an app list. */
 private data class AppRow(
     val pkg: String,
     val name: String,
@@ -82,38 +79,56 @@ private data class AppRow(
 )
 
 private class Prefs(ctx: Context) {
-    private val sp = ctx.getSharedPreferences(ConfigKeys.PREFS, Context.MODE_PRIVATE)
+    val sp = ctx.getSharedPreferences(ConfigKeys.PREFS, Context.MODE_PRIVATE)
     fun bool(k: String, d: Boolean) = sp.getBoolean(k, d)
     fun putBool(k: String, v: Boolean) = sp.edit().putBoolean(k, v).apply()
     fun int(k: String, d: Int) = sp.getInt(k, d)
     fun putInt(k: String, v: Int) = sp.edit().putInt(k, v).apply()
     fun str(k: String, d: String) = sp.getString(k, d) ?: d
     fun putStr(k: String, v: String) = sp.edit().putString(k, v).apply()
+    fun keys(): Set<String> = sp.all.keys
 }
 
-/** Only apps that (a) appear in HookCatalog and (b) are installed on this device. */
+/** Apps that appear in HookCatalog (i.e. have a hook) and are installed. */
 private suspend fun loadCatalog(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
     val pm = ctx.packageManager
     HookCatalog.ENTRIES.mapNotNull { e ->
-        try {
+        val row = try {
             val pi = pm.getPackageInfo(e.pkg, 0)
             val ai = pi.applicationInfo ?: return@mapNotNull null
             AppRow(
-                pkg = e.pkg,
-                name = e.name,
-                features = e.features,
-                compat = e.compat,
+                pkg = e.pkg, name = e.name, features = e.features, compat = e.compat,
                 version = pi.versionName ?: "",
-                icon = try {
-                    ai.loadIcon(pm)
-                } catch (t: Throwable) {
-                    null
-                },
+                icon = try { ai.loadIcon(pm) } catch (t: Throwable) { null },
             )
         } catch (t: Throwable) {
-            null // not installed
+            null
         }
+        row
     }
+}
+
+/** Every launchable app on the device (for the extension-feature page). */
+private suspend fun loadAllApps(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
+    val pm = ctx.packageManager
+    val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    @Suppress("DEPRECATION")
+    val resolved = pm.queryIntentActivities(intent, 0)
+    resolved.mapNotNull { ri ->
+        try {
+            val ai = ri.activityInfo.applicationInfo
+            val pi = pm.getPackageInfo(ai.packageName, 0)
+            AppRow(
+                pkg = ai.packageName,
+                name = pm.getApplicationLabel(ai).toString(),
+                features = "", compat = "",
+                version = pi.versionName ?: "",
+                icon = try { ai.loadIcon(pm) } catch (t: Throwable) { null },
+            )
+        } catch (t: Throwable) {
+            null
+        }
+    }.distinctBy { it.pkg }.sortedBy { it.name }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,17 +142,25 @@ fun MyHookApp(activity: ComponentActivity) {
     var tab by remember { mutableIntStateOf(0) }
     var searchOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    var rows by remember { mutableStateOf<List<AppRow>>(emptyList()) }
+    var catalog by remember { mutableStateOf<List<AppRow>>(emptyList()) }
+    var allApps by remember { mutableStateOf<List<AppRow>>(emptyList()) }
     var scopeSet by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var showWhitelist by remember { mutableStateOf(false) }
+    var settingsApp by remember { mutableStateOf<AppRow?>(null) }
 
     LaunchedEffect(Unit) {
-        rows = loadCatalog(ctx)
-        // keep the scope state in sync with LSPosed (apps added outside MyHook show as checked too)
+        catalog = loadCatalog(ctx)
+        allApps = loadAllApps(ctx)
         while (true) {
             scopeSet = ScopeManager.currentScope().toSet()
             delay(2000)
         }
+    }
+
+    // per-app feature settings screen
+    val open = settingsApp
+    if (open != null) {
+        AppFeatureScreen(app = open, prefs = prefs, onBack = { settingsApp = null })
+        return
     }
 
     Scaffold(
@@ -145,7 +168,7 @@ fun MyHookApp(activity: ComponentActivity) {
             TopAppBar(
                 title = { Text("MyHook") },
                 actions = {
-                    if (tab == 0) {
+                    if (tab == 0 || tab == 1) {
                         IconButton(onClick = {
                             searchOpen = !searchOpen
                             if (!searchOpen) query = ""
@@ -164,46 +187,29 @@ fun MyHookApp(activity: ComponentActivity) {
         Column(Modifier.fillMaxSize().padding(pad)) {
             TabRow(selectedTabIndex = tab) {
                 listOf("应用", "拓展功能", "关于").forEachIndexed { i, title ->
-                    Tab(selected = tab == i, onClick = { tab = i }, text = { Text(title) })
+                    Tab(selected = tab == i, onClick = { tab = i; query = "" }, text = { Text(title) })
                 }
             }
             when (tab) {
                 0 -> AppsTab(
-                    rows = rows,
-                    scopeSet = scopeSet,
-                    searchOpen = searchOpen,
-                    query = query,
-                    onQuery = { query = it },
+                    rows = catalog, scopeSet = scopeSet,
+                    searchOpen = searchOpen, query = query, onQuery = { query = it },
                     onToggle = { pkg, want ->
                         if (want) {
-                            ScopeManager.requestScope(listOf(pkg)) { _, msg ->
-                                scope.launch { snackbar.showSnackbar(msg) }
-                            }
+                            ScopeManager.requestScope(listOf(pkg)) { _, msg -> scope.launch { snackbar.showSnackbar(msg) } }
                         } else {
-                            ScopeManager.removeScope(listOf(pkg)) { _, msg ->
-                                scope.launch { snackbar.showSnackbar(msg) }
-                            }
+                            ScopeManager.removeScope(listOf(pkg)) { _, msg -> scope.launch { snackbar.showSnackbar(msg) } }
                         }
                     },
                 )
-                1 -> FeaturesTab(prefs, rows, { showWhitelist = it })
+                1 -> AllAppsTab(
+                    rows = allApps, prefs = prefs,
+                    searchOpen = searchOpen, query = query, onQuery = { query = it },
+                    onOpen = { settingsApp = it },
+                )
                 else -> AboutTab()
             }
         }
-    }
-
-    if (showWhitelist) {
-        val initial = prefs.str(ConfigKeys.ACCEL_WHITELIST, "")
-            .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        WhitelistDialog(
-            rows = rows,
-            initial = initial,
-            onDismiss = { showWhitelist = false },
-            onConfirm = { picked ->
-                prefs.putStr(ConfigKeys.ACCEL_WHITELIST, picked.joinToString(","))
-                showWhitelist = false
-            },
-        )
     }
 }
 
@@ -216,234 +222,236 @@ private fun AppsTab(
     onQuery: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
 ) {
-    // only apps with hooks (already ensured by loadCatalog), filter by search,
-    // then sort: scoped apps first, then by name.
     val shown = remember(rows, scopeSet, query) {
         rows.asSequence()
-            .filter {
-                query.isBlank() ||
-                    it.name.contains(query, ignoreCase = true) ||
-                    it.pkg.contains(query, ignoreCase = true)
-            }
-            .sortedWith(
-                compareByDescending<AppRow> { it.pkg in scopeSet }
-                    .thenBy { it.name }
-            )
+            .filter { query.isBlank() || it.name.contains(query, true) || it.pkg.contains(query, true) }
+            .sortedWith(compareByDescending<AppRow> { it.pkg in scopeSet }.thenBy { it.name })
             .toList()
     }
-
     Column(Modifier.fillMaxSize()) {
         if (searchOpen) {
             OutlinedTextField(
-                value = query,
-                onValueChange = onQuery,
-                label = { Text("搜索应用名 / 包名") },
-                singleLine = true,
+                value = query, onValueChange = onQuery,
+                label = { Text("搜索应用名 / 包名") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
         if (shown.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    if (rows.isEmpty()) "未检测到已安装的支持应用" else "没有匹配的应用",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+            EmptyHint(if (rows.isEmpty()) "未检测到已安装的支持应用" else "没有匹配的应用")
             return
         }
         LazyColumn(Modifier.fillMaxSize()) {
             items(shown, key = { it.pkg }) { row ->
-                AppCard(
-                    row = row,
-                    checked = row.pkg in scopeSet,
-                    onCheckedChange = { onToggle(row.pkg, it) },
-                )
+                AppCard(row = row, checked = row.pkg in scopeSet, onClick = null) { onToggle(row.pkg, it) }
             }
         }
     }
 }
 
 @Composable
-private fun AppCard(row: AppRow, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Card(
+private fun AllAppsTab(
+    rows: List<AppRow>,
+    prefs: Prefs,
+    searchOpen: Boolean,
+    query: String,
+    onQuery: (String) -> Unit,
+    onOpen: (AppRow) -> Unit,
+) {
+    val shown = remember(rows, query) {
+        rows.filter { query.isBlank() || it.name.contains(query, true) || it.pkg.contains(query, true) }
+    }
+    Column(Modifier.fillMaxSize()) {
+        if (searchOpen) {
+            OutlinedTextField(
+                value = query, onValueChange = onQuery,
+                label = { Text("搜索应用名 / 包名") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+        Text(
+            "点应用进去单独设置拓展功能（${FeatureRegistry.all.size} 项）",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
+        )
+        if (shown.isEmpty()) {
+            EmptyHint("没有匹配的应用")
+            return
+        }
+        LazyColumn(Modifier.fillMaxSize()) {
+            items(shown, key = { it.pkg }) { row ->
+                val n = remember(row.pkg, prefs) {
+                    FeatureRegistry.all.count { prefs.bool(it.enabledKey(row.pkg), false) }
+                }
+                AppCard(
+                    row = row,
+                    checked = n > 0,
+                    checkedReadOnly = true,
+                    onClick = { onOpen(row) },
+                    trailingLabel = if (n > 0) "已开 $n" else null,
+                ) { }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppFeatureScreen(app: AppRow, prefs: Prefs, onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(app.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+            )
+        },
+    ) { pad ->
+        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())) {
+            Text(
+                "${app.pkg}${if (app.version.isBlank()) "" else "  ·  ${app.version}"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp),
+            )
+
+            // app-specific settings
+            if (app.pkg == "com.heytap.health") {
+                OppoSettings(prefs)
+                HorizontalDivider()
+            }
+            if (app.pkg == "com.duolingo") {
+                DuoSettings(prefs)
+                HorizontalDivider()
+            }
+
+            FeatureRegistry.all.forEach { feature ->
+                key(feature.key) {
+                    var on by remember { mutableStateOf(prefs.bool(feature.enabledKey(app.pkg), false)) }
+                    ListItem(
+                        headlineContent = { Text(feature.title) },
+                        supportingContent = { Text(feature.desc) },
+                        trailingContent = {
+                            Switch(checked = on, onCheckedChange = {
+                                on = it
+                                prefs.putBool(feature.enabledKey(app.pkg), it)
+                                rebuildWhitelist(prefs)
+                            })
+                        },
+                    )
+                    HorizontalDivider()
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun OppoSettings(prefs: Prefs) {
+    var enable by remember { mutableStateOf(prefs.bool(ConfigKeys.OPPO_ENABLE, false)) }
+    var target by remember { mutableStateOf(prefs.int(ConfigKeys.OPPO_TARGET, 30000).toString()) }
+    var mode by remember { mutableIntStateOf(prefs.int(ConfigKeys.OPPO_MODE, 0)) }
+    ListItem(
+        headlineContent = { Text("步数修改") },
+        supportingContent = { Text("hook OPPO 数据引擎 getTotalSteps，可保底/封顶") },
+        trailingContent = { Switch(checked = enable, onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.OPPO_ENABLE, it) }) },
+    )
+    OutlinedTextField(
+        value = target,
+        onValueChange = { v -> target = v.filter { it.isDigit() }; target.toIntOrNull()?.let { prefs.putInt(ConfigKeys.OPPO_TARGET, it) } },
+        label = { Text("目标步数") },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+    )
+    Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = mode == 0, onClick = { mode = 0; prefs.putInt(ConfigKeys.OPPO_MODE, 0) }, label = { Text("保底(低则升)") })
+        FilterChip(selected = mode == 1, onClick = { mode = 1; prefs.putInt(ConfigKeys.OPPO_MODE, 1) }, label = { Text("封顶(高则降)") })
+    }
+}
+
+@Composable
+private fun DuoSettings(prefs: Prefs) {
+    var enable by remember { mutableStateOf(prefs.bool(ConfigKeys.DUO_ENABLE, false)) }
+    var zone by remember { mutableStateOf(prefs.str(ConfigKeys.DUO_TIMEZONE, "Asia/Tokyo")) }
+    ListItem(
+        headlineContent = { Text("时区伪造") },
+        supportingContent = { Text("把进程时区伪装成指定值（默认 Asia/Tokyo）") },
+        trailingContent = { Switch(checked = enable, onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.DUO_ENABLE, it) }) },
+    )
+    OutlinedTextField(
+        value = zone,
+        onValueChange = { zone = it; prefs.putStr(ConfigKeys.DUO_TIMEZONE, it) },
+        label = { Text("时区 ID") },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+    )
+}
+
+/** The accelerator whitelist is derived from every app that has the accelerator toggle enabled. */
+private fun rebuildWhitelist(prefs: Prefs) {
+    val prefix = "f_${ConfigKeys.ACCEL}_"
+    val pkgs = prefs.keys().filter { it.startsWith(prefix) && prefs.bool(it, false) }
+        .map { it.removePrefix(prefix) }
+    prefs.putStr(ConfigKeys.ACCEL_WHITELIST, pkgs.joinToString(","))
+}
+
+@Composable
+private fun AppCard(
+    row: AppRow,
+    checked: Boolean,
+    onClick: (() -> Unit)?,
+    checkedReadOnly: Boolean = false,
+    trailingLabel: String? = null,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val bmp = remember(row.pkg) {
-                row.icon?.let { runCatching { it.toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+        val bmp = remember(row.pkg) {
+            row.icon?.let { runCatching { it.toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+        }
+        if (bmp != null) {
+            Image(bitmap = bmp, contentDescription = null, modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)))
+        } else {
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surface))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                if (row.version.isBlank()) row.name else "${row.name} - ${row.version}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            if (row.features.isNotBlank()) {
+                Text(row.features, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            if (bmp != null) {
-                Image(
-                    bitmap = bmp,
-                    contentDescription = null,
-                    modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)),
-                )
-            } else {
-                Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surface))
+            if (row.compat.isNotBlank()) {
+                Text("适配版本: ${row.compat}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (row.version.isBlank()) row.name else "${row.name} - ${row.version}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (row.features.isNotBlank()) {
-                    Text(
-                        row.features,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (row.compat.isNotBlank()) {
-                    Text(
-                        "适配版本: ${row.compat}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    row.pkg,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Text(row.pkg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (trailingLabel != null) {
+                Text(trailingLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
+        }
+        if (!checkedReadOnly) {
             Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }
 
 @Composable
-private fun FeaturesTab(
-    prefs: Prefs,
-    rows: List<AppRow>,
-    setShowWhitelist: (Boolean) -> Unit,
-) {
-    var oppoEnable by remember { mutableStateOf(prefs.bool(ConfigKeys.OPPO_ENABLE, false)) }
-    var oppoTarget by remember { mutableStateOf(prefs.int(ConfigKeys.OPPO_TARGET, 30000).toString()) }
-    var oppoMode by remember { mutableIntStateOf(prefs.int(ConfigKeys.OPPO_MODE, 0)) }
-    var duoEnable by remember { mutableStateOf(prefs.bool(ConfigKeys.DUO_ENABLE, false)) }
-    var duoZone by remember { mutableStateOf(prefs.str(ConfigKeys.DUO_TIMEZONE, "Asia/Tokyo")) }
-
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        FeatureHeader("OPPO 健康 · 步数修改")
-        ListItem(
-            headlineContent = { Text("启用") },
-            supportingContent = { Text("hook OPPO 数据引擎 getTotalSteps，可保底/封顶") },
-            trailingContent = {
-                Switch(checked = oppoEnable, onCheckedChange = { oppoEnable = it; prefs.putBool(ConfigKeys.OPPO_ENABLE, it) })
-            },
-        )
-        OutlinedTextField(
-            value = oppoTarget,
-            onValueChange = { v ->
-                oppoTarget = v.filter { it.isDigit() }
-                oppoTarget.toIntOrNull()?.let { prefs.putInt(ConfigKeys.OPPO_TARGET, it) }
-            },
-            label = { Text("目标步数") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        )
-        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = oppoMode == 0, onClick = { oppoMode = 0; prefs.putInt(ConfigKeys.OPPO_MODE, 0) }, label = { Text("保底(低则升)") })
-            FilterChip(selected = oppoMode == 1, onClick = { oppoMode = 1; prefs.putInt(ConfigKeys.OPPO_MODE, 1) }, label = { Text("封顶(高则降)") })
-        }
-
-        HorizontalDivider()
-        FeatureHeader("多邻国 · 时区伪造")
-        ListItem(
-            headlineContent = { Text("启用") },
-            supportingContent = { Text("把进程时区伪装成指定值（默认 Asia/Tokyo）") },
-            trailingContent = {
-                Switch(checked = duoEnable, onCheckedChange = { duoEnable = it; prefs.putBool(ConfigKeys.DUO_ENABLE, it) })
-            },
-        )
-        OutlinedTextField(
-            value = duoZone,
-            onValueChange = { duoZone = it; prefs.putStr(ConfigKeys.DUO_TIMEZONE, it) },
-            label = { Text("时区 ID") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        )
-
-        HorizontalDivider()
-        FeatureHeader("拓展功能")
-        FeatureRegistry.all.forEach { feature ->
-            key(feature.key) {
-                var on by remember { mutableStateOf(prefs.bool(feature.key, false)) }
-                ListItem(
-                    headlineContent = { Text(feature.title) },
-                    supportingContent = { Text(feature.desc) },
-                    trailingContent = {
-                        Switch(checked = on, onCheckedChange = { on = it; prefs.putBool(feature.key, it) })
-                    },
-                )
-                if (feature is AcceleratorWhitelist) {
-                    Button(
-                        onClick = { setShowWhitelist(true) },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    ) {
-                        val n = prefs.str(ConfigKeys.ACCEL_WHITELIST, "").split(",").count { it.trim().isNotEmpty() }
-                        Text("选择白名单应用 ($n)")
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(24.dp))
+private fun EmptyHint(text: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
-}
-
-@Composable
-private fun FeatureHeader(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
-    )
-}
-
-@Composable
-private fun WhitelistDialog(
-    rows: List<AppRow>,
-    initial: Set<String>,
-    onDismiss: () -> Unit,
-    onConfirm: (List<String>) -> Unit,
-) {
-    var picked by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("加速器代理白名单") },
-        text = {
-            LazyColumn(Modifier.height(400.dp)) {
-                items(rows, key = { it.pkg }) { row ->
-                    ListItem(
-                        headlineContent = { Text(row.name) },
-                        supportingContent = { Text(row.pkg) },
-                        trailingContent = {
-                            Checkbox(checked = row.pkg in picked, onCheckedChange = {
-                                picked = if (row.pkg in picked) picked - row.pkg else picked + row.pkg
-                            })
-                        },
-                        modifier = Modifier.clickable {
-                            picked = if (row.pkg in picked) picked - row.pkg else picked + row.pkg
-                        },
-                    )
-                }
-            }
-        },
-        confirmButton = { Button(onClick = { onConfirm(picked.toList()) }) { Text("保存") } },
-        dismissButton = { Button(onClick = onDismiss) { Text("取消") } },
-    )
 }
 
 @Composable
@@ -451,9 +459,10 @@ private fun AboutTab() {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("MyHook", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
-        Text("LibXposed API 101 模块。基于 HookVip（应用 hook / 动态作用域）+ Fuck for VIP（拓展功能）的思路重写，并内置 StepShook（OPPO 步数）与 duotimefaker（多邻国时区）。")
+        Text("LibXposed API 101 模块。应用 hook 思路来自 HookVip，拓展功能思路来自 Fuck for VIP，内置 StepShook（OPPO 步数）与 duotimefaker（多邻国时区）。")
         Spacer(Modifier.height(8.dp))
-        Text("勾选应用 = 直接请求加入作用域（通知栏确认）。已加入的置顶显示。")
+        Text("· 应用页：勾选 = 直接请求加入作用域（通知栏确认），已加入的置顶。")
+        Text("· 拓展功能页：列出全部应用，点进去按 app 单独开关。")
         Spacer(Modifier.height(8.dp))
         Text("日志: adb logcat -s MyHook", style = MaterialTheme.typography.bodySmall)
     }

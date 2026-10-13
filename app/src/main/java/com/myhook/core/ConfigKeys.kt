@@ -15,14 +15,12 @@ object ConfigKeys {
     const val DUO_ENABLE = "duo_enable"
     const val DUO_TIMEZONE = "duo_timezone"
 
-    // Extension features
-    const val ACCEL_ENABLE = "accel_whitelist_enable"
-    const val ACCEL_WHITELIST = "accel_whitelist_apps" // comma separated
-
-    const val HIDE_ROOT_ENABLE = "hide_root_enable"
-    const val HIDE_DEV_ENABLE = "hide_dev_enable"
-    const val FLAG_SECURE_ENABLE = "flag_secure_enable"
-    const val HIDE_VPN_ENABLE = "hide_vpn_enable"
-    const val TOAST_FILTER_ENABLE = "toast_filter_enable"
-    const val TOAST_FILTER_KEYWORDS = "toast_filter_keywords" // comma separated
+    // Per-app extension features. The real config key is "f_<featureKey>_<pkg>" (see Feature.enabledKey).
+    const val ACCEL = "accelerator_whitelist"
+    const val ACCEL_WHITELIST = "accel_whitelist_apps" // comma separated (derived from the ACCEL toggles)
+    const val FEATURE_SENSOR = "disable_sensor"
+    const val FEATURE_BLANK_PASS = "blank_pass"
+    const val FEATURE_DIALOG_BLOCK = "dialog_blocking"
+    const val FEATURE_CONTROL_INTERCEPT = "control_interception"
+    const val FEATURE_AD_BLOCK = "ad_blocking"
 }
