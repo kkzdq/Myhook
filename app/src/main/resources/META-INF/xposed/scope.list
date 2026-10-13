@@ -1,0 +1,64 @@
+# MyHook starter scope. With staticScope=false you can add more from the in-app picker
+# (tick the app -> "加入作用域" -> confirm in the notification).
+
+# --- OPPO Health step editing ---
+com.heytap.health
+
+# --- appshare ---
+info.muge.appshare
+# --- 百度输入法 ---
+com.baidu.input
+# --- 百度网盘 ---
+com.baidu.netdisk
+# --- 小X分身 ---
+com.bly.dkplat
+# --- 菜鸟 ---
+com.cainiao.wireless
+# --- 设备信息 ---
+com.liuzh.deviceinfo
+# --- 豆包 ---
+com.larus.nova
+# --- 多邻国 ---
+com.duolingo
+# --- ES文件浏览器 ---
+com.estrongs.android.pop
+# --- 外星仔 ---
+com.etalien.booster
+# --- 冰箱 ---
+com.catchingnow.icebox
+# --- 铁路12306 ---
+com.MobileTicket
+# --- 网易云音乐 ---
+com.netease.cloudmusic
+# --- pixiv ---
+jp.pxv.android
+# --- 存储空间隔离 ---
+moe.shizuku.redirectstorage
+# --- 瞬译 ---
+com.spaceship.screen.textcopy
+# --- thanox ---
+github.tornaco.android.thanos
+# --- wps ---
+cn.wps.moffice_eng
+# --- 醒图 ---
+com.xt.retouch
+# --- 阿里云盘 ---
+com.alicloud.databox
+# --- 豆瓣 ---
+com.douban.frodo
+# --- 企业微信 ---
+com.tencent.wework
+# --- pydroid ---
+ru.iiec.pydroid3
+# --- QQ音乐 ---
+com.tencent.qqmusic
+# --- via ---
+mark.via
+# --- macrodroid ---
+com.arlosoft.macrodroid
+# --- 甲壳虫adb助手 ---
+com.didjdk.adbhelper
+# --- 外部存储设备 (app data folder editing) ---
+com.android.externalstorage
+# --- 酷安 ---
+com.coolapk.market

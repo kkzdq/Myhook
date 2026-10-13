@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <queries>
+        <package android:name="com.heytap.health" />
+        <package android:name="com.duolingo" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyHook">
+
+        <!-- Framework delivers the IXposedService binder here (LibXposed API >= 101). -->
+        <provider
+            android:name="io.github.libxposed.service.XposedProvider"
+            android:authorities="com.myhook.XposedService"
+            android:exported="true" />
+
+        <!-- Config store read by hooked processes (no XSharedPreferences / world-readable prefs). -->
+        <provider
+            android:name="com.myhook.core.ConfigProvider"
+            android:authorities="com.myhook.config"
+            android:exported="true" />
+
+        <activity
+            android:name="com.myhook.ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

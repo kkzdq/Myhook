@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyHook</string>
+    <string name="tab_apps">应用</string>
+    <string name="tab_features">拓展功能</string>
+    <string name="tab_about">关于</string>
+    <string name="scope_hint">勾选应用后点击“加入作用域”，在通知栏确认即可（无需重启 LSPosed 管理器）。</string>
+    <string name="add_scope">加入作用域</string>
+    <string name="feature_accelerator_whitelist">加速器代理白名单</string>
+    <string name="feature_accelerator_whitelist_desc">让加速器为勾选的 APP 提供 VPN 代理（采用 Fuck for VIP 的自定义白名单实现）。</string>
+</resources>
