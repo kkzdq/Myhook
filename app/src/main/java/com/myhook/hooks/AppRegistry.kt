@@ -37,6 +37,8 @@ object AppRegistry {
         CoolApk,
         QQMusic,
         WeWork,
+        IceBox,
+        Retouch,
     )
 
     /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
@@ -75,6 +77,8 @@ object AppRegistry {
         "com.coolapk.market" to ("酷安" to "去广告（DexKit 搜类）"),
         "com.tencent.qqmusic" to ("QQ音乐" to "超品音质/去下载限制（DexKit 搜类）"),
         "com.tencent.wework" to ("企业微信" to "强制开启平板模式"),
+        "com.catchingnow.icebox" to ("冰箱 IceBox" to "解锁高级版"),
+        "com.xt.retouch" to ("醒图" to "解锁会员功能（DexKit 搜类）"),
     )
 
     private val catalogByPkg: Map<String, HookCatalog.Entry> by lazy {
