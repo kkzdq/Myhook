@@ -16,6 +16,9 @@ object AppShare : AppHook {
     private const val FOREVER = 113143670061000L
 
     override fun apply(ctx: HookContext) {
+        // FFV supplement: FFV `p169o00o00oO/o000OOo` case 22 -> getHaveAd() = false
+        ctx.hookMethod("info.muge.appshare.view.launch.LaunchBean", "getHaveAd") { false }
+
         ctx.hookAllConstructors("info.muge.appshare.view.launch.LaunchBean") { chain ->
             val args = chain.args.toMutableList()
             if (args.size >= 2) {

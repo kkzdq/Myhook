@@ -25,6 +25,10 @@ object AppRegistry {
         ShunYi,
         DeviceInfo,
         Wps,
+        AliCloud,
+        Douban,
+        AdbHelper,
+        Pydroid,
     )
 
     fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
