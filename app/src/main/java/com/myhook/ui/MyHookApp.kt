@@ -3,6 +3,7 @@ package com.myhook.ui
 import android.content.Context
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +89,13 @@ private class Prefs(ctx: Context) {
     fun str(k: String, d: String) = sp.getString(k, d) ?: d
     fun putStr(k: String, v: String) = sp.edit().putString(k, v).apply()
     fun keys(): Set<String> = sp.all.keys
+
+    /** Per-app master switch (see [ConfigKeys.masterKey]). */
+    fun master(pkg: String) = sp.getBoolean(ConfigKeys.masterKey(pkg), false)
+    fun putMaster(pkg: String, v: Boolean) =
+        sp.edit().putBoolean(ConfigKeys.masterKey(pkg), v).apply()
+
+    fun hasMaster(pkg: String) = sp.contains(ConfigKeys.masterKey(pkg))
 }
 
 /**
@@ -159,15 +168,41 @@ fun MyHookApp(activity: ComponentActivity) {
         catalog = loadCatalog(ctx)
         allApps = loadAllApps(ctx)
         while (true) {
-            scopeSet = ScopeManager.currentScope().toSet()
+            val sc = ScopeManager.currentScope().toSet()
+            scopeSet = sc
+            // Reconcile: an app already in scope (e.g. added from the LSPosed manager) counts as
+            // "master on", so its features are allowed to run.
+            sc.forEach { p -> if (!prefs.hasMaster(p)) prefs.putMaster(p, true) }
             delay(2000)
         }
+    }
+
+    // System back: settings screen -> close it; other tab -> back to 应用; 应用 -> exit the app.
+    BackHandler(enabled = settingsApp != null || tab != 0) {
+        if (settingsApp != null) settingsApp = null else tab = 0
     }
 
     // per-app feature settings screen
     val open = settingsApp
     if (open != null) {
-        AppFeatureScreen(app = open, prefs = prefs, onBack = { settingsApp = null })
+        AppFeatureScreen(
+            app = open,
+            prefs = prefs,
+            inScope = open.pkg in scopeSet,
+            onToggleScope = { want ->
+                prefs.putMaster(open.pkg, want)
+                if (want) {
+                    ScopeManager.requestScope(listOf(open.pkg)) { _, msg ->
+                        scope.launch { snackbar.showSnackbar(msg) }
+                    }
+                } else {
+                    ScopeManager.removeScope(listOf(open.pkg)) { _, msg ->
+                        scope.launch { snackbar.showSnackbar(msg) }
+                    }
+                }
+            },
+            onBack = { settingsApp = null },
+        )
         return
     }
 
@@ -203,6 +238,7 @@ fun MyHookApp(activity: ComponentActivity) {
                     rows = catalog, scopeSet = scopeSet,
                     searchOpen = searchOpen, query = query, onQuery = { query = it },
                     onToggle = { pkg, want ->
+                        prefs.putMaster(pkg, want)
                         if (want) {
                             ScopeManager.requestScope(listOf(pkg)) { _, msg -> scope.launch { snackbar.showSnackbar(msg) } }
                         } else {
@@ -323,7 +359,14 @@ private fun AllAppsTab(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppFeatureScreen(app: AppRow, prefs: Prefs, onBack: () -> Unit) {
+private fun AppFeatureScreen(
+    app: AppRow,
+    prefs: Prefs,
+    inScope: Boolean,
+    onToggleScope: (Boolean) -> Unit,
+    onBack: () -> Unit,
+) {
+    var master by remember { mutableStateOf(prefs.master(app.pkg)) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -344,31 +387,68 @@ private fun AppFeatureScreen(app: AppRow, prefs: Prefs, onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
             )
 
-            // app-specific settings
-            if (app.pkg == "com.heytap.health") {
-                OppoSettings(prefs)
-                HorizontalDivider()
-            }
-            if (app.pkg == "com.duolingo") {
-                DuoSettings(prefs)
-                HorizontalDivider()
+            // ---- master switch: everything below only applies while this is on ----
+            ListItem(
+                headlineContent = { Text("启用 MyHook（总开关）", fontWeight = FontWeight.Bold) },
+                supportingContent = {
+                    Text(
+                        when {
+                            master && inScope -> "已开启 · 已在作用域，下面各项才生效"
+                            master -> "已开启 · 请确认 LSPosed 通知以加入作用域"
+                            else -> "已关闭 · 下面各项即使打开也不生效"
+                        }
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = master,
+                        onCheckedChange = { master = it; onToggleScope(it) },
+                    )
+                },
+            )
+            HorizontalDivider()
+
+            if (!master) {
+                Text(
+                    "总开关关闭时，本页所有功能都不会生效。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
 
-            FeatureRegistry.all.forEach { feature ->
-                key(feature.key) {
-                    var on by remember { mutableStateOf(prefs.bool(feature.enabledKey(app.pkg), false)) }
-                    ListItem(
-                        headlineContent = { Text(feature.title) },
-                        supportingContent = { Text(feature.desc) },
-                        trailingContent = {
-                            Switch(checked = on, onCheckedChange = {
-                                on = it
-                                prefs.putBool(feature.enabledKey(app.pkg), it)
-                                rebuildWhitelist(prefs)
-                            })
-                        },
-                    )
+            val gate = master
+            Column(Modifier.alpha(if (gate) 1f else 0.4f)) {
+                // app-specific settings
+                if (app.pkg == "com.heytap.health") {
+                    OppoSettings(prefs, gate)
                     HorizontalDivider()
+                }
+                if (app.pkg == "com.duolingo") {
+                    DuoSettings(prefs, gate)
+                    HorizontalDivider()
+                }
+
+                FeatureRegistry.all.forEach { feature ->
+                    key(feature.key) {
+                        var on by remember { mutableStateOf(prefs.bool(feature.enabledKey(app.pkg), false)) }
+                        ListItem(
+                            headlineContent = { Text(feature.title) },
+                            supportingContent = { Text(feature.desc) },
+                            trailingContent = {
+                                Switch(
+                                    checked = on && gate,
+                                    enabled = gate,
+                                    onCheckedChange = {
+                                        on = it
+                                        prefs.putBool(feature.enabledKey(app.pkg), it)
+                                        rebuildWhitelist(prefs)
+                                    },
+                                )
+                            },
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -377,38 +457,52 @@ private fun AppFeatureScreen(app: AppRow, prefs: Prefs, onBack: () -> Unit) {
 }
 
 @Composable
-private fun OppoSettings(prefs: Prefs) {
+private fun OppoSettings(prefs: Prefs, enabled: Boolean) {
     var enable by remember { mutableStateOf(prefs.bool(ConfigKeys.OPPO_ENABLE, false)) }
     var target by remember { mutableStateOf(prefs.int(ConfigKeys.OPPO_TARGET, 30000).toString()) }
     var mode by remember { mutableIntStateOf(prefs.int(ConfigKeys.OPPO_MODE, 0)) }
     ListItem(
         headlineContent = { Text("步数修改") },
         supportingContent = { Text("hook OPPO 数据引擎 getTotalSteps，可保底/封顶") },
-        trailingContent = { Switch(checked = enable, onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.OPPO_ENABLE, it) }) },
+        trailingContent = {
+            Switch(
+                checked = enable && enabled,
+                enabled = enabled,
+                onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.OPPO_ENABLE, it) },
+            )
+        },
     )
     OutlinedTextField(
         value = target,
+        enabled = enabled,
         onValueChange = { v -> target = v.filter { it.isDigit() }; target.toIntOrNull()?.let { prefs.putInt(ConfigKeys.OPPO_TARGET, it) } },
         label = { Text("目标步数") },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
     )
     Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = mode == 0, onClick = { mode = 0; prefs.putInt(ConfigKeys.OPPO_MODE, 0) }, label = { Text("保底(低则升)") })
-        FilterChip(selected = mode == 1, onClick = { mode = 1; prefs.putInt(ConfigKeys.OPPO_MODE, 1) }, label = { Text("封顶(高则降)") })
+        FilterChip(selected = mode == 0, enabled = enabled, onClick = { mode = 0; prefs.putInt(ConfigKeys.OPPO_MODE, 0) }, label = { Text("保底(低则升)") })
+        FilterChip(selected = mode == 1, enabled = enabled, onClick = { mode = 1; prefs.putInt(ConfigKeys.OPPO_MODE, 1) }, label = { Text("封顶(高则降)") })
     }
 }
 
 @Composable
-private fun DuoSettings(prefs: Prefs) {
+private fun DuoSettings(prefs: Prefs, enabled: Boolean) {
     var enable by remember { mutableStateOf(prefs.bool(ConfigKeys.DUO_ENABLE, false)) }
     var zone by remember { mutableStateOf(prefs.str(ConfigKeys.DUO_TIMEZONE, "Asia/Tokyo")) }
     ListItem(
         headlineContent = { Text("时区伪造") },
         supportingContent = { Text("把进程时区伪装成指定值（默认 Asia/Tokyo）") },
-        trailingContent = { Switch(checked = enable, onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.DUO_ENABLE, it) }) },
+        trailingContent = {
+            Switch(
+                checked = enable && enabled,
+                enabled = enabled,
+                onCheckedChange = { enable = it; prefs.putBool(ConfigKeys.DUO_ENABLE, it) },
+            )
+        },
     )
     OutlinedTextField(
         value = zone,
+        enabled = enabled,
         onValueChange = { zone = it; prefs.putStr(ConfigKeys.DUO_TIMEZONE, it) },
         label = { Text("时区 ID") },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -420,6 +514,7 @@ private fun rebuildWhitelist(prefs: Prefs) {
     val prefix = "f_${ConfigKeys.ACCEL}_"
     val pkgs = prefs.keys().filter { it.startsWith(prefix) && prefs.bool(it, false) }
         .map { it.removePrefix(prefix) }
+        .filter { prefs.master(it) } // master off => the feature does not apply
     prefs.putStr(ConfigKeys.ACCEL_WHITELIST, pkgs.joinToString(","))
 }
 

@@ -23,4 +23,11 @@ object ConfigKeys {
     const val FEATURE_DIALOG_BLOCK = "dialog_blocking"
     const val FEATURE_CONTROL_INTERCEPT = "control_interception"
     const val FEATURE_AD_BLOCK = "ad_blocking"
+
+    /**
+     * Per-app master switch. While it is off **nothing** MyHook does applies to that app — neither
+     * the app hook nor any extension feature, even if their own toggles are on. Turning it on is
+     * also what asks the framework to add the app to the module scope.
+     */
+    fun masterKey(pkg: String): String = "master_$pkg"
 }

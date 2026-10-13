@@ -1,5 +1,7 @@
 package com.myhook.hooks
 
+import com.myhook.core.ConfigKeys
+import com.myhook.core.ConfigStore
 import com.myhook.features.Feature
 import com.myhook.features.FeatureRegistry
 
@@ -31,9 +33,14 @@ object AppRegistry {
         Pydroid,
     )
 
-    fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
+    /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
+    fun enabled(pkg: String): Boolean = ConfigStore.bool(ConfigKeys.masterKey(pkg), false)
 
-    fun featuresFor(pkg: String): List<Feature> = FeatureRegistry.enabledFor(pkg)
+    fun hooksFor(pkg: String): List<AppHook> =
+        if (enabled(pkg)) hooks.filter { pkg in it.packages } else emptyList()
+
+    fun featuresFor(pkg: String): List<Feature> =
+        if (enabled(pkg)) FeatureRegistry.enabledFor(pkg) else emptyList()
 
     /** True when at least one real hook targets [pkg] (i.e. the app is actually supported). */
     fun hasHook(pkg: String): Boolean = hooks.any { pkg in it.packages }
