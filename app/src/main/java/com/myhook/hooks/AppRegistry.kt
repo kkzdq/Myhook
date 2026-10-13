@@ -24,6 +24,7 @@ object AppRegistry {
         EsExplorer,
         ShunYi,
         DeviceInfo,
+        Wps,
     )
 
     fun hooksFor(pkg: String): List<AppHook> = hooks.filter { pkg in it.packages }
