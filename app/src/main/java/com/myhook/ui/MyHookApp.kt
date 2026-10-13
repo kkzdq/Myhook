@@ -250,7 +250,7 @@ fun MyHookApp(activity: ComponentActivity) {
                     searchOpen = searchOpen, query = query, onQuery = { query = it },
                     onOpen = { settingsApp = it },
                 )
-                else -> AboutTab()
+                else -> AboutTab(prefs)
             }
         }
     }
@@ -576,7 +576,7 @@ private fun EmptyHint(text: String) {
 }
 
 @Composable
-private fun AboutTab() {
+private fun AboutTab(prefs: Prefs) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("MyHook", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
@@ -588,6 +588,25 @@ private fun AboutTab() {
         Text("· 应用页：只列出已支持的应用，勾选 = 请求加入作用域（通知栏确认），已加入的置顶。")
         Text("· 拓展功能页：列出全部应用，点进去按 app 单独设置。")
         Text("· 每个应用顶部有总开关，关闭时该应用的一切功能都不生效。")
+        Spacer(Modifier.height(12.dp))
+
+        var logOn by remember { mutableStateOf(prefs.bool(ConfigKeys.DEBUG_LOG, true)) }
+        ListItem(
+            headlineContent = { Text("详细日志") },
+            supportingContent = {
+                Text("只写到 logcat（adb logcat -s MyHook），不生成任何日志文件。关闭后仅保留报错。")
+            },
+            trailingContent = {
+                Switch(checked = logOn, onCheckedChange = { logOn = it; prefs.putBool(ConfigKeys.DEBUG_LOG, it) })
+            },
+        )
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "本模块不申请存储/联网权限，不读写任何外部文件；配置只存在模块自己的应用数据目录里。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(8.dp))
         Text("日志: adb logcat -s MyHook", style = MaterialTheme.typography.bodySmall)
     }

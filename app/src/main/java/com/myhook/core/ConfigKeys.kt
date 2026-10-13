@@ -30,4 +30,10 @@ object ConfigKeys {
      * also what asks the framework to add the app to the module scope.
      */
     fun masterKey(pkg: String): String = "master_$pkg"
+
+    /**
+     * Verbose logging switch. When off, hooked processes emit nothing except errors.
+     * Logs only ever go to logcat; no file is written either way.
+     */
+    const val DEBUG_LOG = "debug_log"
 }

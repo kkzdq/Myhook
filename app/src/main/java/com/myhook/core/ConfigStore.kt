@@ -35,7 +35,9 @@ object ConfigStore {
                 }
             }
         } catch (t: Throwable) {
-            HookLog.e("ConfigStore read failed", t)
+            // Log directly (not via HookLog) — HookLog itself reads this store, so routing the
+            // failure through it would recurse.
+            android.util.Log.e(HookLog.TAG, "ConfigStore read failed", t)
         }
     }
 
