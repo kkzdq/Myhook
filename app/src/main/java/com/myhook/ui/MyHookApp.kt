@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.myhook.core.ConfigKeys
 import com.myhook.features.FeatureRegistry
+import com.myhook.hooks.AppRegistry
 import com.myhook.hooks.HookCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -89,10 +90,17 @@ private class Prefs(ctx: Context) {
     fun keys(): Set<String> = sp.all.keys
 }
 
-/** Apps that appear in HookCatalog (i.e. have a hook) and are installed. */
+/**
+ * Apps that (a) have a real, implemented hook and (b) are installed.
+ *
+ * The generated [HookCatalog] lists every app HookVip supports; MyHook only shows the subset that
+ * actually has a hook ported, so the list never advertises an app that would do nothing.
+ */
 private suspend fun loadCatalog(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
     val pm = ctx.packageManager
-    HookCatalog.ENTRIES.mapNotNull { e ->
+    HookCatalog.ENTRIES
+        .filter { AppRegistry.hasHook(it.pkg) }
+        .mapNotNull { e ->
         val row = try {
             val pi = pm.getPackageInfo(e.pkg, 0)
             val ai = pi.applicationInfo ?: return@mapNotNull null
@@ -240,9 +248,19 @@ private fun AppsTab(
             EmptyHint(if (rows.isEmpty()) "未检测到已安装的支持应用" else "没有匹配的应用")
             return
         }
+        Text(
+            "已支持 ${rows.size} 个应用（勾选即请求加入作用域）",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
+        )
         LazyColumn(Modifier.fillMaxSize()) {
             items(shown, key = { it.pkg }) { row ->
-                AppCard(row = row, checked = row.pkg in scopeSet, onClick = null) { onToggle(row.pkg, it) }
+                AppCard(
+                    row = row,
+                    checked = row.pkg in scopeSet,
+                    onClick = null,
+                    trailingLabel = "已实现",
+                ) { onToggle(row.pkg, it) }
             }
         }
     }
