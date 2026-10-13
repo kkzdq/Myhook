@@ -6,6 +6,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Version comes from the CI workflow (auto-bumped 0.1 each release); defaults for local builds.
+val appVersionName = (project.findProperty("appVersionName") as String?) ?: "0.1"
+val appVersionCode = ((project.findProperty("appVersionCode") as String?) ?: "10").toInt()
+
 android {
     namespace = "com.myhook"
     compileSdk = 36
@@ -14,8 +18,8 @@ android {
         applicationId = "com.myhook"
         minSdk = 27
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         vectorDrawables { useSupportLibrary = true }
     }
 

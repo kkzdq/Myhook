@@ -19,9 +19,21 @@ LSPosed v2.2.0 的 daemon 会扫描模块：**模块 API 版本 < 100（旧 API�
 >
 > **注意**：`targetApiVersion>=102` 时禁止调用旧的 `de.robv.android.xposed` API；本模块只用新 API，将来切 102 也不用改代码。
 
-## 构建（GitHub Actions）
+## 构建 / 发版（GitHub Actions）
 
-仓库自带 `.github/workflows/build.yml`：push 到 `main`/`master` 或手动 `workflow_dispatch` 即编译，产物在 Actions 的 `MyHook-debug-apk` artifact 里。
+`.github/workflows/build.yml` 是**手动触发**（`workflow_dispatch`）：
+
+> GitHub → **Actions** → 左侧 **Build MyHook** → 右上 **Run workflow**
+
+每次运行会：
+1. 读已有 tag，算出下一个版本（从 **v0.1** 起，每次 **+0.1**：v0.1 → v0.2 → … → v0.9 → v1.0）
+2. 用该版本号编译 `app-debug.apk`
+3. 传成 artifact（`MyHook-vX.Y`）
+4. **创建 GitHub Release** 并把 APK 挂上去
+
+**下载**：仓库首页右侧 **Releases**（或 `https://github.com/kkzdq/Myhook/releases`）→ 点最新版本 → **Assets** 里的 `MyHook-vX.Y.apk`。
+
+> 想恢复 push 自动构建，把 `on:` 改成 `push: { branches: [ main ] }` 即可（那样每次 push 都会 +0.1 并发版，注意别刷版本）。
 
 本地（可选，需要 Android SDK）：
 

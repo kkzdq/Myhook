@@ -1,37 +1,66 @@
 name: Build MyHook
 
 # Manual only — run from the Actions tab ("Run workflow").
-# To also build on push, add:   push: { branches: [ main ] }
+# Each run bumps the version by 0.1 (v0.1 -> v0.2 -> ... -> v0.9 -> v1.0) and publishes a GitHub Release.
 on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # need all tags to compute the next version
+
+      - name: Compute next version
+        id: ver
+        run: |
+          set -e
+          last=$(git tag -l 'v[0-9]*' | sed 's/^v//' | sort -V | tail -n1)
+          if [ -z "$last" ]; then major=0; minor=0; else major="${last%%.*}"; minor="${last##*.}"; fi
+          minor=$((minor + 1))
+          if [ "$minor" -gt 9 ]; then major=$((major + 1)); minor=0; fi
+          echo "name=${major}.${minor}" >> "$GITHUB_OUTPUT"
+          echo "code=$((major * 1000 + minor * 10))" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.13'
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle :app:assembleDebug --no-daemon --stacktrace \
+            -PappVersionName=${{ steps.ver.outputs.name }} \
+            -PappVersionCode=${{ steps.ver.outputs.code }}
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - name: Package APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/MyHook-v${{ steps.ver.outputs.name }}.apk"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: MyHook-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: MyHook-v${{ steps.ver.outputs.name }}
+          path: dist/*.apk
           if-no-files-found: error
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.ver.outputs.name }}" dist/*.apk \
+            --title "MyHook v${{ steps.ver.outputs.name }}" \
+            --notes "自动构建 · commit ${{ github.sha }}"
