@@ -25,9 +25,11 @@ android {
 
     buildTypes {
         release {
-            // Phase 1 keeps minify off so the CI debug/release APK is easy to inspect.
-            // Turn on + apply proguard-rules.pro once the hook set is stable.
-            isMinifyEnabled = false
+            // Shrink + obfuscate: the debug build ships ~42 MB of dex because nothing is stripped.
+            // Release is what CI publishes; it is signed with the debug key so it installs directly.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -74,7 +76,9 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    // NOTE: material-icons-extended is intentionally NOT used — it is ~7000 icons x 5 styles
+    // shipped as Kotlin code (~40 MB of dex). Everything the UI needs (Search / Close / ArrowBack)
+    // is in material-icons-core, which material3 pulls in already.
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.foundation:foundation")
     debugImplementation("androidx.compose.ui:ui-tooling")

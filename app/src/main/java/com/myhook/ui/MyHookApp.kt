@@ -91,11 +91,15 @@ private class Prefs(ctx: Context) {
     fun keys(): Set<String> = sp.all.keys
 
     /** Per-app master switch (see [ConfigKeys.masterKey]). */
-    fun master(pkg: String) = sp.getBoolean(ConfigKeys.masterKey(pkg), false)
+    fun master(pkg: String, def: Boolean = false) = sp.getBoolean(ConfigKeys.masterKey(pkg), def)
     fun putMaster(pkg: String, v: Boolean) =
         sp.edit().putBoolean(ConfigKeys.masterKey(pkg), v).apply()
 
     fun hasMaster(pkg: String) = sp.contains(ConfigKeys.masterKey(pkg))
+
+    /** Effective master state: explicit value if the user set one, otherwise "already in scope". */
+    fun masterOrDefault(pkg: String, inScope: Boolean): Boolean =
+        if (hasMaster(pkg)) master(pkg) else inScope
 }
 
 /**
@@ -168,11 +172,7 @@ fun MyHookApp(activity: ComponentActivity) {
         catalog = loadCatalog(ctx)
         allApps = loadAllApps(ctx)
         while (true) {
-            val sc = ScopeManager.currentScope().toSet()
-            scopeSet = sc
-            // Reconcile: an app already in scope (e.g. added from the LSPosed manager) counts as
-            // "master on", so its features are allowed to run.
-            sc.forEach { p -> if (!prefs.hasMaster(p)) prefs.putMaster(p, true) }
+            scopeSet = ScopeManager.currentScope().toSet()
             delay(2000)
         }
     }
@@ -366,7 +366,7 @@ private fun AppFeatureScreen(
     onToggleScope: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
-    var master by remember { mutableStateOf(prefs.master(app.pkg)) }
+    var master by remember(app.pkg) { mutableStateOf(prefs.masterOrDefault(app.pkg, inScope)) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -514,7 +514,7 @@ private fun rebuildWhitelist(prefs: Prefs) {
     val prefix = "f_${ConfigKeys.ACCEL}_"
     val pkgs = prefs.keys().filter { it.startsWith(prefix) && prefs.bool(it, false) }
         .map { it.removePrefix(prefix) }
-        .filter { prefs.master(it) } // master off => the feature does not apply
+        .filter { prefs.master(it, true) } // only an explicit "off" excludes it
     prefs.putStr(ConfigKeys.ACCEL_WHITELIST, pkgs.joinToString(","))
 }
 

@@ -41,8 +41,14 @@ object AppRegistry {
         Retouch,
     )
 
-    /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
-    fun enabled(pkg: String): Boolean = ConfigStore.bool(ConfigKeys.masterKey(pkg), false)
+    /**
+     * True when the per-app master switch is on. Nothing MyHook does applies while it is off.
+     *
+     * Defaults to **true**: the module only runs inside an app that is already in the framework
+     * scope, so "injected" already means the user opted in. The UI writes an explicit `false` only
+     * when the master switch is turned off.
+     */
+    fun enabled(pkg: String): Boolean = ConfigStore.bool(ConfigKeys.masterKey(pkg), true)
 
     fun hooksFor(pkg: String): List<AppHook> =
         if (enabled(pkg)) hooks.filter { pkg in it.packages } else emptyList()

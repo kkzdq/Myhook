@@ -39,16 +39,18 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Build debug APK
+      - name: Build release APK
         run: |
-          gradle :app:assembleDebug --no-daemon --stacktrace \
+          # release = R8 shrink + obfuscate + resource shrinking (signed with the debug key so it
+          # installs straight away). The debug variant is ~4x larger because nothing is stripped.
+          gradle :app:assembleRelease --no-daemon --stacktrace \
             -PappVersionName=${{ steps.ver.outputs.name }} \
             -PappVersionCode=${{ steps.ver.outputs.code }}
 
       - name: Package APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/MyHook-v${{ steps.ver.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/MyHook-v${{ steps.ver.outputs.name }}.apk"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
