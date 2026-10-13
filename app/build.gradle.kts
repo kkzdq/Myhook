@@ -80,4 +80,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // DexKit — runtime dex search. Some targets (and both source modules) only expose obfuscated
+    // class names, so the hook has to find the method by "return type + string constant" at runtime.
+    implementation("org.luckypray:dexkit:2.3.0")
 }

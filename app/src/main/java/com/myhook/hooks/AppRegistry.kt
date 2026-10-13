@@ -32,6 +32,8 @@ object AppRegistry {
         AdbHelper,
         Pydroid,
         ExternalStorage,
+        Via,
+        MacroDroid,
     )
 
     /** True when the per-app master switch is on. Nothing MyHook does applies while it is off. */
@@ -65,6 +67,8 @@ object AppRegistry {
         "com.didjdk.adbhelper" to ("甲壳虫ADB助手" to "解锁会员"),
         "ru.iiec.pydroid3" to ("Pydroid 3" to "解锁高级版"),
         "com.android.externalstorage" to ("外部存储设备" to "放开 Android/data 等目录访问限制"),
+        "mark.via" to ("Via 浏览器" to "屏蔽内置广告域名（DexKit 搜类）"),
+        "com.arlosoft.macrodroid" to ("MacroDroid" to "解锁 Pro（DexKit 搜类）"),
     )
 
     private val catalogByPkg: Map<String, HookCatalog.Entry> by lazy {
