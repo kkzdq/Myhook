@@ -57,4 +57,19 @@ object ScopeManager {
             onResult(false, "请求失败: $t")
         }
     }
+
+    /** Removes packages from the module scope. */
+    fun removeScope(packages: List<String>, onResult: (Boolean, String) -> Unit) {
+        val svc = service
+        if (svc == null) {
+            onResult(false, "尚未连接 LSPosed 服务，请稍后重试")
+            return
+        }
+        try {
+            svc.removeScope(packages)
+            onResult(true, "已移出作用域: $packages")
+        } catch (t: Throwable) {
+            onResult(false, "移除失败: $t")
+        }
+    }
 }

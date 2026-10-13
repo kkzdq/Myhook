@@ -1,11 +1,12 @@
 package com.myhook.ui
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,16 +14,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -45,16 +56,30 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.myhook.core.ConfigKeys
 import com.myhook.features.AcceleratorWhitelist
 import com.myhook.features.FeatureRegistry
+import com.myhook.hooks.HookCatalog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class AppEntry(val label: String, val pkg: String, val system: Boolean)
+/** One row of the app list: a catalog entry that is actually installed. */
+private data class AppRow(
+    val pkg: String,
+    val name: String,
+    val features: String,
+    val compat: String,
+    val version: String,
+    val icon: android.graphics.drawable.Drawable?,
+)
 
 private class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences(ConfigKeys.PREFS, Context.MODE_PRIVATE)
@@ -66,19 +91,29 @@ private class Prefs(ctx: Context) {
     fun putStr(k: String, v: String) = sp.edit().putString(k, v).apply()
 }
 
-private suspend fun loadApps(ctx: Context): List<AppEntry> = withContext(Dispatchers.IO) {
+/** Only apps that (a) appear in HookCatalog and (b) are installed on this device. */
+private suspend fun loadCatalog(ctx: Context): List<AppRow> = withContext(Dispatchers.IO) {
     val pm = ctx.packageManager
-    val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    @Suppress("DEPRECATION")
-    val resolved = pm.queryIntentActivities(intent, 0)
-    resolved.map {
-        val ai = it.activityInfo.applicationInfo
-        AppEntry(
-            label = pm.getApplicationLabel(ai).toString(),
-            pkg = ai.packageName,
-            system = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-        )
-    }.distinctBy { it.pkg }.sortedBy { it.label }
+    HookCatalog.ENTRIES.mapNotNull { e ->
+        try {
+            val pi = pm.getPackageInfo(e.pkg, 0)
+            val ai = pi.applicationInfo ?: return@mapNotNull null
+            AppRow(
+                pkg = e.pkg,
+                name = e.name,
+                features = e.features,
+                compat = e.compat,
+                version = pi.versionName ?: "",
+                icon = try {
+                    ai.loadIcon(pm)
+                } catch (t: Throwable) {
+                    null
+                },
+            )
+        } catch (t: Throwable) {
+            null // not installed
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,14 +125,40 @@ fun MyHookApp(activity: ComponentActivity) {
     val snackbar = remember { SnackbarHostState() }
 
     var tab by remember { mutableIntStateOf(0) }
-    var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
-    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var rows by remember { mutableStateOf<List<AppRow>>(emptyList()) }
+    var scopeSet by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showWhitelist by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { apps = loadApps(ctx) }
+    LaunchedEffect(Unit) {
+        rows = loadCatalog(ctx)
+        // keep the scope state in sync with LSPosed (apps added outside MyHook show as checked too)
+        while (true) {
+            scopeSet = ScopeManager.currentScope().toSet()
+            delay(2000)
+        }
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("MyHook") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("MyHook") },
+                actions = {
+                    if (tab == 0) {
+                        IconButton(onClick = {
+                            searchOpen = !searchOpen
+                            if (!searchOpen) query = ""
+                        }) {
+                            Icon(
+                                if (searchOpen) Icons.Filled.Close else Icons.Filled.Search,
+                                contentDescription = "搜索应用",
+                            )
+                        }
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
@@ -108,22 +169,24 @@ fun MyHookApp(activity: ComponentActivity) {
             }
             when (tab) {
                 0 -> AppsTab(
-                    apps = apps,
-                    selected = selected,
-                    onToggle = { pkg ->
-                        selected = if (pkg in selected) selected - pkg else selected + pkg
-                    },
-                    onAddScope = {
-                        if (selected.isEmpty()) {
-                            scope.launch { snackbar.showSnackbar("先勾选要加入作用域的应用") }
+                    rows = rows,
+                    scopeSet = scopeSet,
+                    searchOpen = searchOpen,
+                    query = query,
+                    onQuery = { query = it },
+                    onToggle = { pkg, want ->
+                        if (want) {
+                            ScopeManager.requestScope(listOf(pkg)) { _, msg ->
+                                scope.launch { snackbar.showSnackbar(msg) }
+                            }
                         } else {
-                            ScopeManager.requestScope(selected.toList()) { ok, msg ->
+                            ScopeManager.removeScope(listOf(pkg)) { _, msg ->
                                 scope.launch { snackbar.showSnackbar(msg) }
                             }
                         }
                     },
                 )
-                1 -> FeaturesTab(prefs, apps, { showWhitelist = it })
+                1 -> FeaturesTab(prefs, rows, { showWhitelist = it })
                 else -> AboutTab()
             }
         }
@@ -133,7 +196,7 @@ fun MyHookApp(activity: ComponentActivity) {
         val initial = prefs.str(ConfigKeys.ACCEL_WHITELIST, "")
             .split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
         WhitelistDialog(
-            apps = apps,
+            rows = rows,
             initial = initial,
             onDismiss = { showWhitelist = false },
             onConfirm = { picked ->
@@ -146,31 +209,54 @@ fun MyHookApp(activity: ComponentActivity) {
 
 @Composable
 private fun AppsTab(
-    apps: List<AppEntry>,
-    selected: Set<String>,
-    onToggle: (String) -> Unit,
-    onAddScope: () -> Unit,
+    rows: List<AppRow>,
+    scopeSet: Set<String>,
+    searchOpen: Boolean,
+    query: String,
+    onQuery: (String) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
 ) {
+    // only apps with hooks (already ensured by loadCatalog), filter by search,
+    // then sort: scoped apps first, then by name.
+    val shown = remember(rows, scopeSet, query) {
+        rows.asSequence()
+            .filter {
+                query.isBlank() ||
+                    it.name.contains(query, ignoreCase = true) ||
+                    it.pkg.contains(query, ignoreCase = true)
+            }
+            .sortedWith(
+                compareByDescending<AppRow> { it.pkg in scopeSet }
+                    .thenBy { it.name }
+            )
+            .toList()
+    }
+
     Column(Modifier.fillMaxSize()) {
-        Text(
-            "勾选应用后点“加入作用域”，在通知栏确认即可（无需重启 LSPosed 管理器）。",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(12.dp),
-        )
-        Button(
-            onClick = onAddScope,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        ) { Text("加入作用域 (${selected.size})") }
-        HorizontalDivider()
+        if (searchOpen) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                label = { Text("搜索应用名 / 包名") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+        if (shown.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    if (rows.isEmpty()) "未检测到已安装的支持应用" else "没有匹配的应用",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            return
+        }
         LazyColumn(Modifier.fillMaxSize()) {
-            items(apps, key = { it.pkg }) { app ->
-                ListItem(
-                    headlineContent = { Text(app.label) },
-                    supportingContent = { Text(app.pkg) },
-                    trailingContent = {
-                        Checkbox(checked = app.pkg in selected, onCheckedChange = { onToggle(app.pkg) })
-                    },
-                    modifier = Modifier.clickable { onToggle(app.pkg) },
+            items(shown, key = { it.pkg }) { row ->
+                AppCard(
+                    row = row,
+                    checked = row.pkg in scopeSet,
+                    onCheckedChange = { onToggle(row.pkg, it) },
                 )
             }
         }
@@ -178,9 +264,70 @@ private fun AppsTab(
 }
 
 @Composable
+private fun AppCard(row: AppRow, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val bmp = remember(row.pkg) {
+                row.icon?.let { runCatching { it.toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+            }
+            if (bmp != null) {
+                Image(
+                    bitmap = bmp,
+                    contentDescription = null,
+                    modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)),
+                )
+            } else {
+                Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surface))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (row.version.isBlank()) row.name else "${row.name} - ${row.version}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (row.features.isNotBlank()) {
+                    Text(
+                        row.features,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (row.compat.isNotBlank()) {
+                    Text(
+                        "适配版本: ${row.compat}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    row.pkg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+}
+
+@Composable
 private fun FeaturesTab(
     prefs: Prefs,
-    apps: List<AppEntry>,
+    rows: List<AppRow>,
     setShowWhitelist: (Boolean) -> Unit,
 ) {
     var oppoEnable by remember { mutableStateOf(prefs.bool(ConfigKeys.OPPO_ENABLE, false)) }
@@ -267,7 +414,7 @@ private fun FeatureHeader(text: String) {
 
 @Composable
 private fun WhitelistDialog(
-    apps: List<AppEntry>,
+    rows: List<AppRow>,
     initial: Set<String>,
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit,
@@ -278,17 +425,17 @@ private fun WhitelistDialog(
         title = { Text("加速器代理白名单") },
         text = {
             LazyColumn(Modifier.height(400.dp)) {
-                items(apps, key = { it.pkg }) { app ->
+                items(rows, key = { it.pkg }) { row ->
                     ListItem(
-                        headlineContent = { Text(app.label) },
-                        supportingContent = { Text(app.pkg) },
+                        headlineContent = { Text(row.name) },
+                        supportingContent = { Text(row.pkg) },
                         trailingContent = {
-                            Checkbox(checked = app.pkg in picked, onCheckedChange = {
-                                picked = if (app.pkg in picked) picked - app.pkg else picked + app.pkg
+                            Checkbox(checked = row.pkg in picked, onCheckedChange = {
+                                picked = if (row.pkg in picked) picked - row.pkg else picked + row.pkg
                             })
                         },
                         modifier = Modifier.clickable {
-                            picked = if (app.pkg in picked) picked - app.pkg else picked + app.pkg
+                            picked = if (row.pkg in picked) picked - row.pkg else picked + row.pkg
                         },
                     )
                 }
@@ -305,6 +452,8 @@ private fun AboutTab() {
         Text("MyHook", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Text("LibXposed API 101 模块。基于 HookVip（应用 hook / 动态作用域）+ Fuck for VIP（拓展功能）的思路重写，并内置 StepShook（OPPO 步数）与 duotimefaker（多邻国时区）。")
+        Spacer(Modifier.height(8.dp))
+        Text("勾选应用 = 直接请求加入作用域（通知栏确认）。已加入的置顶显示。")
         Spacer(Modifier.height(8.dp))
         Text("日志: adb logcat -s MyHook", style = MaterialTheme.typography.bodySmall)
     }
